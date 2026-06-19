@@ -17,6 +17,7 @@ let units = [
 
 const alarms = ["1st Alarm", "2nd Alarm", "3rd Alarm", "4th Alarm", "5th Alarm"];
 
+// Fetch data
 async function fetchData() {
   try {
     const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
@@ -26,11 +27,13 @@ async function fetchData() {
       const data = await res.json();
       incidents = data.record.incidents || [];
       units = data.record.units || units;
+      if (incidents.length > 0 && !currentIncidentId) currentIncidentId = incidents[0].id;
       updateUI();
     }
   } catch(e) {}
 }
 
+// Save data
 async function saveData() {
   try {
     await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
@@ -47,7 +50,7 @@ async function saveData() {
 setInterval(fetchData, 4000);
 
 function initMap() {
-  map = L.map('map').setView([10.72, 122.55], 13); // Iloilo City
+  map = L.map('map').setView([10.72, 122.55], 13); // Iloilo
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19}).addTo(map);
 }
 
@@ -89,19 +92,51 @@ function sendAlert() {
   updateUI();
 }
 
+function changeUnitStatus(unitId, newStatus) {
+  const unit = units.find(u => u.id === unitId);
+  if (!unit) return;
+  
+  const oldStatus = unit.status;
+  unit.status = newStatus;
+
+  // Update responder count in active incident
+  if (currentIncidentId) {
+    const inc = incidents.find(i => i.id === currentIncidentId);
+    if (inc) {
+      if (newStatus === "responding" && oldStatus !== "responding") {
+        if (!inc.responders.includes(unit.name)) inc.responders.push(unit.name);
+      } 
+      else if (newStatus === "available" && oldStatus === "responding") {
+        inc.responders = inc.responders.filter(name => name !== unit.name);
+      }
+    }
+  }
+
+  saveData();
+  updateUI();
+}
+
 function updateUI() {
+  // Active Calls
   const active = document.getElementById("activeIncidents");
   active.innerHTML = incidents.map(inc => `
     <div class="box">
-      <strong>${inc.type}</strong><br>
+      <strong>${inc.type || 'Incident'}</strong><br>
       📍 ${inc.address}<br>
-      <small>${inc.status} • ${inc.responders.length} units</small>
+      <small>${inc.status} • ${inc.responders.length} units responding</small>
     </div>
   `).join("") || "<em>No active calls</em>";
 
+  // Unit Status Board
   document.getElementById("unitList").innerHTML = units.map(u => `
-    <div style="padding:8px; background:#1a1a1f; margin:4px 0; border-radius:4px;">
-      <strong>${u.name}</strong> - ${u.status}
+    <div style="padding:10px; background:#1a1a1f; margin:6px 0; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
+      <strong>${u.name}</strong>
+      <select onchange="changeUnitStatus(${u.id}, this.value)">
+        <option value="available" ${u.status==='available'?'selected':''}>AVAILABLE</option>
+        <option value="responding" ${u.status==='responding'?'selected':''}>RESPONDING</option>
+        <option value="onscene" ${u.status==='onscene'?'selected':''}>ON SCENE</option>
+        <option value="busy" ${u.status==='busy'?'selected':''}>BUSY</option>
+      </select>
     </div>
   `).join("");
 }
@@ -110,5 +145,8 @@ window.onload = () => {
   initMap();
   fetchData();
   updateUI();
-  document.getElementById("time").textContent = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  // Live Clock
+  setInterval(() => {
+    document.getElementById("time").textContent = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  }, 1000);
 };
