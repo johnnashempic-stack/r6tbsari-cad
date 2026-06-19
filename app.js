@@ -1,102 +1,91 @@
 let map;
+let logged = false;
+let messages = {};
+let cooldown = {};
 
-let messages = [];
-let panicCooldown = {};
-
-function initMap(){
+function init(){
   map = L.map("map").setView([10.72,122.55],13);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+
+  setInterval(()=>{
+    document.getElementById("time").innerText =
+    new Date().toLocaleTimeString();
+  },1000);
 }
 
-/* ================= CHAT ================= */
+function login(){
+  if(document.getElementById("pass").value==="IR6TB-018"){
+    logged=true;
+    alert("ADMIN LOGGED IN");
+  }
+}
 
+function dispatch(){
+  if(!logged) return;
+
+  let type=document.getElementById("type").value;
+  let loc=document.getElementById("loc").value;
+
+  document.getElementById("calls").innerHTML +=
+  `<div>${type} - ${loc}</div>`;
+
+  L.marker(map.getCenter())
+    .addTo(map)
+    .bindPopup(type+"<br>"+loc);
+}
+
+/* CHAT */
 function openChat(){
-  document.getElementById("unitChatPanel").style.display="block";
+  document.getElementById("chatPanel").style.display="block";
 }
 
 function closeChat(){
-  document.getElementById("unitChatPanel").style.display="none";
+  document.getElementById("chatPanel").style.display="none";
 }
 
 function sendMsg(){
-  let sender = document.getElementById("sender").value;
-  let msg = document.getElementById("msg").value;
+  let u=document.getElementById("unit").value;
+  let m=document.getElementById("msg").value;
 
-  if(!["RESCUE 1","RESCUE 2","RESCUE 3","RESCUE 4","RESCUE 5"].includes(sender)) return;
+  messages[u]=(messages[u]||[]).concat(m);
 
-  messages.push({
-    sender,
-    msg,
-    time:new Date().toLocaleTimeString()
-  });
-
-  renderChat();
+  document.getElementById("log").innerHTML +=
+  `<div><b>${u}</b>: ${m}</div>`;
 }
 
-function renderChat(){
-  document.getElementById("chatLog").innerHTML =
-  messages.map(m=>`<div><b>${m.sender}</b>: ${m.msg}</div>`).join("");
-}
-
-/* ================= 10 CODE ================= */
-
+/* 10 CODE */
 function toggleCodes(){
-  let c = document.getElementById("codePanel");
-  c.style.display = c.style.display==="block"?"none":"block";
+  let c=document.getElementById("codes");
+  c.style.display=c.style.display==="block"?"none":"block";
 }
 
-function sendCode(code){
-  messages.push({
-    sender:"SYSTEM",
-    msg:code,
-    time:new Date().toLocaleTimeString()
-  });
-
-  renderChat();
+function code(c){
+  document.getElementById("log").innerHTML +=
+  `<div>SYSTEM: ${c}</div>`;
 }
 
-/* ================= PANIC SYSTEM ================= */
+/* PANIC */
+function panic(){
+  let u=document.getElementById("unit").value;
 
-function panicTrigger(){
-
-  let unit = document.getElementById("sender").value;
-  let now = Date.now();
-
-  if(panicCooldown[unit] && panicCooldown[unit] > now){
-    alert("PANIC COOLDOWN ACTIVE (5 MIN)");
+  if(cooldown[u] && cooldown[u]>Date.now()){
+    alert("COOLDOWN ACTIVE");
     return;
   }
 
-  panicCooldown[unit] = now + 300000;
+  cooldown[u]=Date.now()+300000;
 
-  // SOUND
-  document.getElementById("panicSound").play();
+  document.getElementById("alarm").play();
 
-  // MAP MARKER
-  let pos = map.getCenter();
+  let pos=map.getCenter();
 
   L.marker([pos.lat,pos.lng])
     .addTo(map)
-    .bindPopup("🚨 PANIC: " + unit)
+    .bindPopup("🚨 PANIC "+u)
     .openPopup();
 
-  // CHAT LOG
-  messages.push({
-    sender:"SYSTEM",
-    msg:"🚨 PANIC ALERT FROM " + unit,
-    time:new Date().toLocaleTimeString()
-  });
-
-  renderChat();
+  document.getElementById("log").innerHTML +=
+  `<div style="color:red">PANIC: ${u}</div>`;
 }
 
-/* ================= CLOCK ================= */
-
-setInterval(()=>{
-  document.getElementById("time").innerText =
-  new Date().toLocaleTimeString();
-},1000);
-
-window.onload = ()=>{
-  initMap();
-};
+window.onload=init;
