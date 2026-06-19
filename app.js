@@ -1,4 +1,3 @@
-// === JSONBIN CONFIG ===
 const BIN_ID = "6a35088cf5f4af5e290dfd57";
 const MASTER_KEY = "$2a$10$9tAozl0KM.tjp5SiZrLhr.pLYpLlnk1p5Veo/I1t9Rlj1y6IBCL2q";
 
@@ -15,12 +14,9 @@ let units = [
   {id:4, name: "RESCUE 4", status: "available"},
   {id:5, name: "RESCUE 5", status: "available"}
 ];
-let history = [];
-let mapMarkerPos = null;   // For syncing map marker
 
 const alarms = ["1st Alarm", "2nd Alarm", "3rd Alarm", "4th Alarm", "5th Alarm"];
 
-// Fetch all data
 async function fetchData() {
   try {
     const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
@@ -28,24 +24,13 @@ async function fetchData() {
     });
     if (res.ok) {
       const data = await res.json();
-      const record = data.record || {};
-      
-      incidents = record.incidents || [];
-      history = record.history || [];
-      units = record.units || units;
-      mapMarkerPos = record.mapMarkerPos || null;
-
-      if (incidents.length > 0 && !currentIncidentId) {
-        currentIncidentId = incidents[0].id;
-      }
-      
+      incidents = data.record.incidents || [];
+      units = data.record.units || units;
       updateUI();
-      updateMapMarker();
     }
-  } catch (e) {}
+  } catch(e) {}
 }
 
-// Save all data
 async function saveData() {
   try {
     await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
@@ -54,43 +39,16 @@ async function saveData() {
         "Content-Type": "application/json",
         "X-Master-Key": MASTER_KEY
       },
-      body: JSON.stringify({
-        incidents,
-        history,
-        units,
-        mapMarkerPos
-      })
+      body: JSON.stringify({ incidents, units })
     });
-  } catch (e) {}
+  } catch(e) {}
 }
 
-// Auto sync every 4 seconds
 setInterval(fetchData, 4000);
 
 function initMap() {
-  map = L.map('map').setView([10.3, 123.9], 13);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
-
-  map.on("click", e => {
-    if (!isAdmin) return;
-    updateMarker(e.latlng);
-  });
-}
-
-function updateMarker(latlng) {
-  if (marker) map.removeLayer(marker);
-  marker = L.marker(latlng).addTo(map).bindPopup("Incident Location").openPopup();
-  mapMarkerPos = { lat: latlng.lat, lng: latlng.lng };
-  saveData();
-}
-
-function updateMapMarker() {
-  if (mapMarkerPos && !marker) {
-    marker = L.marker([mapMarkerPos.lat, mapMarkerPos.lng])
-      .addTo(map)
-      .bindPopup("Incident Location")
-      .openPopup();
-  }
+  map = L.map('map').setView([10.72, 122.55], 13); // Iloilo City
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19}).addTo(map);
 }
 
 function playSiren() {
@@ -104,23 +62,21 @@ function loginAdmin() {
   if (pass === ADMIN_PASSWORD) {
     isAdmin = true;
     document.getElementById("adminPanel").style.display = "block";
-    document.getElementById("mode").innerHTML = "🛡️ ADMIN MODE";
   } else {
     alert("Access Denied");
   }
 }
 
-// ================== MAIN FUNCTIONS ==================
 function sendAlert() {
   if (!isAdmin) return;
   playSiren();
 
   const newIncident = {
     id: Date.now().toString(),
+    type: document.getElementById("callType").value,
     address: document.getElementById("address").value.trim() || "Unknown Location",
     details: document.getElementById("details").value.trim(),
-    status: alarms[0],
-    highest: 0,
+    status: "1st Alarm",
     time: new Date().toLocaleString(),
     responders: []
   };
@@ -133,94 +89,26 @@ function sendAlert() {
   updateUI();
 }
 
-function raiseAlarm() {
-  if (!isAdmin || !currentIncidentId) return;
-  const inc = incidents.find(i => i.id === currentIncidentId);
-  if (!inc) return;
-  const idx = alarms.indexOf(inc.status);
-  if (idx < alarms.length - 1) {
-    inc.status = alarms[idx + 1];
-    if (idx + 1 > inc.highest) inc.highest = idx + 1;
-    playSiren();
-    saveData();
-    updateUI();
-  }
-}
-
-function underControl() {
-  if (!isAdmin || !currentIncidentId) return;
-  const inc = incidents.find(i => i.id === currentIncidentId);
-  if (inc) inc.status = "UNDER CONTROL";
-  saveData();
-  updateUI();
-}
-
-function fireOut() {
-  if (!isAdmin || !currentIncidentId) return;
-  const idx = incidents.findIndex(i => i.id === currentIncidentId);
-  if (idx === -1) return;
-  const inc = incidents[idx];
-  history.unshift({...inc, final: inc.status, respondersCount: inc.responders.length});
-  incidents.splice(idx, 1);
-  currentIncidentId = incidents.length ? incidents[0].id : null;
-  saveData();
-  updateUI();
-}
-
-function respond() {
-  if (!currentIncidentId) return;
-  const name = document.getElementById("callsign").value.trim();
-  if (!name) return;
-  const inc = incidents.find(i => i.id === currentIncidentId);
-  if (inc && !inc.responders.includes(name)) {
-    inc.responders.push(name);
-    saveData();
-  }
-  document.getElementById("callsign").value = "";
-  updateUI();
-}
-
-function changeUnitStatus(unitId, newStatus) {
-  const unit = units.find(u => u.id === unitId);
-  if (unit) {
-    unit.status = newStatus;
-    saveData();
-    updateUI();
-  }
-}
-
 function updateUI() {
-  // Active Incidents
-  document.getElementById("activeIncidents").innerHTML = incidents.map(inc => `
-    <div class="incident-item" onclick="currentIncidentId=${inc.id};updateUI()">
-      <strong>${inc.address}</strong><br>
-      <span style="color:#ef4444">${inc.status}</span> • ${inc.responders.length} units
+  const active = document.getElementById("activeIncidents");
+  active.innerHTML = incidents.map(inc => `
+    <div class="box">
+      <strong>${inc.type}</strong><br>
+      📍 ${inc.address}<br>
+      <small>${inc.status} • ${inc.responders.length} units</small>
     </div>
-  `).join("") || "<em>No active incidents</em>";
+  `).join("") || "<em>No active calls</em>";
 
-  // Unit Status Board
   document.getElementById("unitList").innerHTML = units.map(u => `
-    <div class="unit-item">
-      <strong>${u.name}</strong>
-      <select onchange="changeUnitStatus(${u.id}, this.value)">
-        <option value="available" ${u.status==='available'?'selected':''}>AVAILABLE</option>
-        <option value="responding" ${u.status==='responding'?'selected':''}>RESPONDING</option>
-        <option value="onscene" ${u.status==='onscene'?'selected':''}>ON SCENE</option>
-      </select>
+    <div style="padding:8px; background:#1a1a1f; margin:4px 0; border-radius:4px;">
+      <strong>${u.name}</strong> - ${u.status}
     </div>
   `).join("");
-
-  // History
-  document.getElementById("history").innerHTML = history.slice().reverse().map(h => `
-    <div class="incident-item">
-      📍 ${h.address}<br>
-      <small>Final: ${h.final} | ${h.respondersCount} units</small>
-    </div>
-  `).join("") || "<em>No history yet</em>";
 }
 
 window.onload = () => {
   initMap();
-  fetchData();        // Initial load
+  fetchData();
   updateUI();
+  document.getElementById("time").textContent = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
 };
