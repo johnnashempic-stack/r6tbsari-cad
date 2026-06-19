@@ -1,8 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <title>R6TBSARI MDT - DEPLOYMENT</title>
+  <title>R6TBSARI MDT</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#ef4444">
+
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
   <style>
@@ -10,15 +14,14 @@
 
     body {
       margin: 0;
-      font-family: Arial, sans-serif;
+      font-family: Arial;
       background: #0a0a0f;
       color: #ddd;
-      height: 100vh;
       display: flex;
+      height: 100vh;
       overflow: hidden;
     }
 
-    /* SIDEBAR */
     .sidebar {
       width: 180px;
       background: #111114;
@@ -28,8 +31,8 @@
     .logo {
       padding: 15px;
       text-align: center;
-      background: #1f1f24;
       color: #ef4444;
+      background: #1f1f24;
       font-weight: bold;
     }
 
@@ -39,12 +42,11 @@
       color: #bbb;
     }
 
-    .nav-item:hover, .nav-item.active {
+    .nav-item:hover {
       background: #ef4444;
       color: white;
     }
 
-    /* MAIN */
     .main {
       flex: 1;
       display: flex;
@@ -54,9 +56,9 @@
     header {
       background: #1a1a1f;
       padding: 8px;
+      border-bottom: 3px solid #ef4444;
       display: flex;
       justify-content: space-between;
-      border-bottom: 3px solid #ef4444;
     }
 
     .content {
@@ -64,29 +66,29 @@
       display: flex;
       gap: 10px;
       padding: 10px;
-      overflow: auto;
     }
 
     .box {
       flex: 1;
       background: #1f1f24;
-      border: 1px solid #444;
       padding: 10px;
       overflow: auto;
     }
 
-    .map {
-      height: 300px;
+    .right {
+      width: 220px;
+      background: #111114;
+      padding: 10px;
+      border-left: 1px solid #333;
     }
 
     button {
+      width: 100%;
+      margin-top: 5px;
+      padding: 8px;
       background: #ef4444;
       border: none;
       color: white;
-      padding: 8px;
-      width: 100%;
-      margin-top: 5px;
-      cursor: pointer;
     }
 
     input, textarea, select {
@@ -98,18 +100,10 @@
       border: 1px solid #333;
     }
 
-    /* INCIDENT PANEL */
     #incidentPanel {
       display: none;
       margin-top: 10px;
-      padding: 10px;
       border: 1px solid #333;
-    }
-
-    .rightPanel {
-      width: 220px;
-      background: #111114;
-      border-left: 1px solid #333;
       padding: 10px;
     }
   </style>
@@ -121,16 +115,16 @@
 <div class="sidebar">
   <div class="logo">MDT SYSTEM</div>
 
-  <div class="nav-item active">CALLS</div>
-  <div class="nav-item">UNITS</div>
+  <div class="nav-item">CALLS</div>
+  <div class="nav-item" onclick="toggleUnits()">UNITS</div>
   <div class="nav-item">HISTORY</div>
   <div class="nav-item" onclick="toggleChat()">UNIT CHAT</div>
 
-  <!-- CHAT -->
-  <div id="chatPanel" style="display:none; padding:10px; border-top:1px solid #333;">
-    <h4>UNIT CHAT</h4>
+  <!-- UNITS -->
+  <div id="unitsPanel" style="display:none; padding:10px;">
+    <h4>UNIT CONTROL</h4>
 
-    <select id="chatUnit">
+    <select id="unitSelect">
       <option>RESCUE 1</option>
       <option>RESCUE 2</option>
       <option>RESCUE 3</option>
@@ -138,32 +132,43 @@
       <option>RESCUE 5</option>
     </select>
 
+    <button onclick="setStatus('available')">AVAILABLE</button>
+    <button onclick="setStatus('responding')">RESPONDING</button>
+    <button onclick="setStatus('onscene')">ON SCENE</button>
+    <button onclick="setStatus('busy')">BUSY</button>
+  </div>
+
+  <!-- CHAT -->
+  <div id="chatPanel" style="display:none; padding:10px;">
+    <h4>UNIT CHAT</h4>
+
+    <select id="chatUnit">
+      <option>RESCUE 1</option>
+      <option>RESCUE 2</option>
+      <option>RESCUE 3</option>
+    </select>
+
     <textarea id="msg"></textarea>
     <button onclick="sendMsg()">SEND</button>
-
     <div id="log"></div>
   </div>
 </div>
 
 <!-- MAIN -->
 <div class="main">
-
   <header>
     <div><b>DISPATCH CENTER</b></div>
-    <div id="status">ONLINE</div>
+    <div id="status">OFFLINE</div>
   </header>
 
   <div class="content">
 
-    <!-- CALLS -->
     <div class="box">
       <h3>ACTIVE CALLS</h3>
       <div id="activeIncidents"></div>
 
-      <!-- INCIDENT DETAIL -->
       <div id="incidentPanel">
-        <h3>INCIDENT DETAILS</h3>
-
+        <h3>INCIDENT</h3>
         <div id="incTime"></div>
         <div id="incAddress"></div>
         <div id="incDesc"></div>
@@ -171,29 +176,39 @@
         <h4>RESPONDING</h4>
         <div id="respList"></div>
 
-        <h4>ON SCENE</h4>
-        <div id="sceneList"></div>
-
         <button onclick="closeIncident()">CLOSE</button>
       </div>
     </div>
 
-    <!-- MAP -->
     <div class="box">
       <h3>MAP</h3>
-      <div id="map" class="map"></div>
+      <div id="map" style="height:300px;"></div>
     </div>
 
   </div>
 </div>
 
-<!-- RIGHT PANEL -->
-<div class="rightPanel">
+<!-- RIGHT -->
+<div class="right">
 
-  <h3>UNIT STATUS</h3>
+  <!-- ADMIN LOGIN -->
+  <div id="adminBox">
+    <h3>DISPATCH LOGIN</h3>
+    <input type="password" id="adminPass">
+    <button onclick="adminLogin()">LOGIN</button>
+  </div>
 
-  <div>Available: <span id="avail">5</span></div>
-  <div>Responding: <span id="resp">0</span></div>
+  <!-- DISPATCH -->
+  <div id="dispatchControls" style="display:none;">
+    <h3>DISPATCH</h3>
+    <button onclick="newCall()">NEW CALL</button>
+    <button onclick="logoutAdmin()">LOGOUT</button>
+
+    <hr>
+
+    <div>Available: <span id="avail">5</span></div>
+    <div>Responding: <span id="resp">0</span></div>
+  </div>
 
 </div>
 
