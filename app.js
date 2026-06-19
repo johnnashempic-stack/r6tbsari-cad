@@ -1,152 +1,181 @@
 const BIN_ID = "6a35088cf5f4af5e290dfd57";
 const MASTER_KEY = "$2a$10$9tAozl0KM.tjp5SiZrLhr.pLYpLlnk1p5Veo/I1t9Rlj1y6IBCL2q";
 
-let map, marker;
+let map;
 let isAdmin = false;
 const ADMIN_PASSWORD = "IR6TB-018";
 
 let incidents = [];
 let currentIncidentId = null;
+
 let units = [
-  {id:1, name: "RESCUE 1", status: "available"},
-  {id:2, name: "RESCUE 2", status: "available"},
-  {id:3, name: "RESCUE 3", status: "available"},
-  {id:4, name: "RESCUE 4", status: "available"},
-  {id:5, name: "RESCUE 5", status: "available"}
+  {id:1, name:"RESCUE 1", status:"available"},
+  {id:2, name:"RESCUE 2", status:"available"},
+  {id:3, name:"RESCUE 3", status:"available"},
+  {id:4, name:"RESCUE 4", status:"available"},
+  {id:5, name:"RESCUE 5", status:"available"}
 ];
 
-const alarms = ["1st Alarm", "2nd Alarm", "3rd Alarm", "4th Alarm", "5th Alarm"];
-
-// Fetch data
+// FETCH
 async function fetchData() {
   try {
     const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
       headers: { "X-Master-Key": MASTER_KEY }
     });
+
     if (res.ok) {
       const data = await res.json();
       incidents = data.record.incidents || [];
       units = data.record.units || units;
-      if (incidents.length > 0 && !currentIncidentId) currentIncidentId = incidents[0].id;
       updateUI();
     }
-  } catch(e) {}
+  } catch {}
 }
 
-// Save data
+// SAVE
 async function saveData() {
   try {
     await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
-      method: 'PUT',
-      headers: {
-        "Content-Type": "application/json",
-        "X-Master-Key": MASTER_KEY
+      method:"PUT",
+      headers:{
+        "Content-Type":"application/json",
+        "X-Master-Key":MASTER_KEY
       },
       body: JSON.stringify({ incidents, units })
     });
-  } catch(e) {}
+  } catch {}
 }
 
 setInterval(fetchData, 4000);
 
+// MAP
 function initMap() {
-  map = L.map('map').setView([10.72, 122.55], 13); // Iloilo
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19}).addTo(map);
+  map = L.map('map').setView([10.72,122.55],13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 }
 
+// SIREN
 function playSiren() {
-  const audio = document.getElementById("alarmSound");
-  audio.currentTime = 0;
-  audio.play().catch(() => {});
+  const a = document.getElementById("alarmSound");
+  a.currentTime = 0;
+  a.play().catch(()=>{});
 }
 
+// ADMIN
 function loginAdmin() {
   const pass = prompt("Enter Admin Password:");
-  if (pass === ADMIN_PASSWORD) {
+  if(pass === ADMIN_PASSWORD){
     isAdmin = true;
-    document.getElementById("adminPanel").style.display = "block";
-  } else {
-    alert("Access Denied");
+    document.getElementById("adminPanel").style.display="block";
   }
 }
 
+// ALERT
 function sendAlert() {
-  if (!isAdmin) return;
+  if(!isAdmin) return;
+
   playSiren();
 
-  const newIncident = {
+  const inc = {
     id: Date.now().toString(),
     type: document.getElementById("callType").value,
-    address: document.getElementById("address").value.trim() || "Unknown Location",
-    details: document.getElementById("details").value.trim(),
-    status: "1st Alarm",
-    time: new Date().toLocaleString(),
-    responders: []
+    address: document.getElementById("address").value,
+    details: document.getElementById("details").value,
+    status:"1st Alarm",
+    responders:[]
   };
 
-  incidents.unshift(newIncident);
-  currentIncidentId = newIncident.id;
-  document.getElementById("address").value = "";
-  document.getElementById("details").value = "";
-  saveData();
-  updateUI();
-}
-
-function changeUnitStatus(unitId, newStatus) {
-  const unit = units.find(u => u.id === unitId);
-  if (!unit) return;
-  
-  const oldStatus = unit.status;
-  unit.status = newStatus;
-
-  // Update responder count in active incident
-  if (currentIncidentId) {
-    const inc = incidents.find(i => i.id === currentIncidentId);
-    if (inc) {
-      if (newStatus === "responding" && oldStatus !== "responding") {
-        if (!inc.responders.includes(unit.name)) inc.responders.push(unit.name);
-      } 
-      else if (newStatus === "available" && oldStatus === "responding") {
-        inc.responders = inc.responders.filter(name => name !== unit.name);
-      }
-    }
-  }
+  incidents.unshift(inc);
+  currentIncidentId = inc.id;
 
   saveData();
   updateUI();
 }
 
-function updateUI() {
-  // Active Calls
-  const active = document.getElementById("activeIncidents");
-  active.innerHTML = incidents.map(inc => `
-    <div class="box">
-      <strong>${inc.type || 'Incident'}</strong><br>
-      📍 ${inc.address}<br>
-      <small>${inc.status} • ${inc.responders.length} units responding</small>
-    </div>
-  `).join("") || "<em>No active calls</em>";
+// UNIT STATUS CHANGE
+function changeUnitStatus(id, status) {
+  const u = units.find(x => x.id === id);
+  if(!u) return;
 
-  // Unit Status Board
-  document.getElementById("unitList").innerHTML = units.map(u => `
-    <div style="padding:10px; background:#1a1a1f; margin:6px 0; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
-      <strong>${u.name}</strong>
+  u.status = status;
+  saveData();
+  updateUI();
+}
+
+// UNIT PANEL OPEN
+function openUnitPanel() {
+  document.getElementById("unitPanel").style.display="block";
+  renderUnitPanel();
+}
+
+// CLOSE
+function closeUnitPanel() {
+  document.getElementById("unitPanel").style.display="none";
+}
+
+// UNIT PANEL RENDER
+function renderUnitPanel() {
+  const box = document.getElementById("unitPanelList");
+
+  box.innerHTML = units.map(u => `
+    <div style="background:#1f1f24;padding:12px;margin:10px 0;border:1px solid #333;display:flex;justify-content:space-between;">
+      <div>
+        <strong>${u.name}</strong><br>
+        <small>${u.status}</small>
+      </div>
+
       <select onchange="changeUnitStatus(${u.id}, this.value)">
-        <option value="available" ${u.status==='available'?'selected':''}>AVAILABLE</option>
-        <option value="responding" ${u.status==='responding'?'selected':''}>RESPONDING</option>
-        <option value="onscene" ${u.status==='onscene'?'selected':''}>ON SCENE</option>
-        <option value="busy" ${u.status==='busy'?'selected':''}>BUSY</option>
+        <option value="available" ${u.status==="available"?"selected":""}>AVAILABLE</option>
+        <option value="responding" ${u.status==="responding"?"selected":""}>RESPONDING</option>
+        <option value="onscene" ${u.status==="onscene"?"selected":""}>ON SCENE</option>
+        <option value="busy" ${u.status==="busy"?"selected":""}>BUSY</option>
       </select>
     </div>
   `).join("");
 }
 
-window.onload = () => {
+// UI
+function updateUI() {
+
+  document.getElementById("activeIncidents").innerHTML =
+    incidents.map(i=>`
+      <div class="box">
+        <strong>${i.type}</strong><br>
+        ${i.address}<br>
+        <small>${i.status}</small>
+      </div>
+    `).join("") || "<em>No calls</em>";
+
+  document.getElementById("unitList").innerHTML =
+    units.map(u=>`
+      <div style="margin:5px 0;padding:8px;background:#111;">
+        ${u.name}
+        <select onchange="changeUnitStatus(${u.id},this.value)">
+          <option value="available" ${u.status==="available"?"selected":""}>A</option>
+          <option value="responding" ${u.status==="responding"?"selected":""}>R</option>
+          <option value="onscene" ${u.status==="onscene"?"selected":""}>S</option>
+          <option value="busy" ${u.status==="busy"?"selected":""}>B</option>
+        </select>
+      </div>
+    `).join("");
+
+  const available = units.filter(u=>u.status==="available").length;
+  document.getElementById("availableCount").textContent = available;
+
+  if(document.getElementById("unitPanel").style.display==="block"){
+    renderUnitPanel();
+  }
+}
+
+// CLOCK
+setInterval(()=>{
+  document.getElementById("time").textContent =
+    new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
+},1000);
+
+// START
+window.onload = ()=>{
   initMap();
   fetchData();
   updateUI();
-  // Live Clock
-  setInterval(() => {
-    document.getElementById("time").textContent = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-  }, 1000);
 };
