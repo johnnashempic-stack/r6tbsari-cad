@@ -1,6 +1,15 @@
-self.addEventListener('push', function(event) {
-  const data = event.data ? event.data.json() : {title: "R6TBSARI MDT", body: "New Alert"};
-  event.waitUntil(
-    self.registration.showNotification(data.title, { body: data.body })
+const CACHE="mdt-v1";
+
+self.addEventListener("install",e=>{
+  e.waitUntil(
+    caches.open(CACHE).then(c=>{
+      return c.addAll(["./","./index.html","./app.js","./manifest.json"]);
+    })
+  );
+});
+
+self.addEventListener("fetch",e=>{
+  e.respondWith(
+    caches.match(e.request).then(r=>r||fetch(e.request))
   );
 });
