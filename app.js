@@ -1,3 +1,7 @@
+// === JSONBIN CONFIG (YOUR KEYS) ===
+const BIN_ID = "6a35088cf5f4af5e290dfd57";
+const MASTER_KEY = "$2a$10$9tAozl0KM.tjp5SiZrLhr.pLYpLlnk1p5Veo/I1t9Rlj1y6IBCL2q";
+
 let map, marker;
 let isAdmin = false;
 const ADMIN_PASSWORD = "IR6TB-018";
@@ -13,20 +17,46 @@ let units = [
 ];
 let history = [];
 
-function loadData() {
-  const saved = localStorage.getItem('r6tbsari_incidents');
-  if (saved) incidents = JSON.parse(saved);
-  const savedHistory = localStorage.getItem('r6tbsari_history');
-  if (savedHistory) history = JSON.parse(savedHistory);
-  if (incidents.length > 0) currentIncidentId = incidents[0].id;
-}
-
-function saveData() {
-  localStorage.setItem('r6tbsari_incidents', JSON.stringify(incidents));
-  localStorage.setItem('r6tbsari_history', JSON.stringify(history));
-}
-
 const alarms = ["1st Alarm", "2nd Alarm", "3rd Alarm", "4th Alarm", "5th Alarm"];
+
+// Fetch latest data
+async function fetchData() {
+  try {
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+      headers: { "X-Master-Key": MASTER_KEY }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      incidents = data.record.incidents || [];
+      history = data.record.history || [];
+      if (incidents.length > 0 && !currentIncidentId) {
+        currentIncidentId = incidents[0].id;
+      }
+      updateUI();
+    }
+  } catch (e) {
+    console.log("Sync failed, trying again...");
+  }
+}
+
+// Save data to cloud
+async function saveData() {
+  try {
+    await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+      method: 'PUT',
+      headers: {
+        "Content-Type": "application/json",
+        "X-Master-Key": MASTER_KEY
+      },
+      body: JSON.stringify({ incidents, history })
+    });
+  } catch (e) {
+    console.log("Save failed");
+  }
+}
+
+// Auto refresh every 4 seconds
+setInterval(fetchData, 4000);
 
 function initMap() {
   map = L.map('map').setView([10.3, 123.9], 13);
@@ -61,7 +91,7 @@ function sendAlert() {
   playSiren();
 
   const newIncident = {
-    id: Date.now(),
+    id: Date.now().toString(),
     address: document.getElementById("address").value.trim() || "Unknown Location",
     details: document.getElementById("details").value.trim(),
     status: alarms[0],
@@ -105,7 +135,7 @@ function fireOut() {
   const idx = incidents.findIndex(i => i.id === currentIncidentId);
   if (idx === -1) return;
   const inc = incidents[idx];
-  history.push({...inc, final: inc.status, respondersCount: inc.responders.length});
+  history.unshift({...inc, final: inc.status, respondersCount: inc.responders.length});
   incidents.splice(idx, 1);
   currentIncidentId = incidents.length ? incidents[0].id : null;
   saveData();
@@ -158,22 +188,8 @@ function updateUI() {
   `).join("") || "<em>No history yet</em>";
 }
 
-function addSyncButton() {
-  const btn = document.createElement('button');
-  btn.textContent = '🔄 Refresh / Sync Data';
-  btn.style.background = '#3b82f6';
-  btn.style.marginTop = '10px';
-  btn.onclick = () => {
-    loadData();
-    updateUI();
-    alert("✅ Data synced!");
-  };
-  document.querySelector('.sidebar').appendChild(btn);
-}
-
 window.onload = () => {
   initMap();
-  loadData();
+  fetchData();           // Initial load
   updateUI();
-  addSyncButton();
 };
