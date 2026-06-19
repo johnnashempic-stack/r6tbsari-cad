@@ -3,108 +3,122 @@
 <head>
   <title>R6TBSARI MDT - DISPATCH CENTER</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#ef4444">
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
   <style>
     * { box-sizing: border-box; }
     body {
-      margin: 0;
-      font-family: 'Segoe UI', Tahoma, sans-serif;
-      background: #0a0a0f;
-      color: #ddd;
-      height: 100vh;
-      overflow: hidden;
-      display: flex;
+      margin:0;
+      font-family:Segoe UI;
+      background:#0a0a0f;
+      color:#ddd;
+      height:100vh;
+      display:flex;
+      overflow:hidden;
     }
 
     .sidebar {
-      width: 180px;
-      background: #111114;
-      border-right: 1px solid #333;
-      padding-top: 10px;
+      width:180px;
+      background:#111114;
+      border-right:1px solid #333;
+      padding-top:10px;
     }
 
     .logo {
-      padding: 15px;
-      text-align: center;
-      background: #1f1f24;
-      font-weight: bold;
-      color: #ef4444;
+      text-align:center;
+      padding:15px;
+      background:#1f1f24;
+      color:#ef4444;
+      font-weight:bold;
     }
 
     .nav-item {
-      padding: 12px 20px;
-      color: #bbb;
-      cursor: pointer;
+      padding:12px 15px;
+      cursor:pointer;
+      color:#bbb;
     }
 
-    .nav-item:hover, .nav-item.active {
-      background: #ef4444;
-      color: white;
+    .nav-item:hover {
+      background:#ef4444;
+      color:#fff;
     }
 
     .main {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
+      flex:1;
+      display:flex;
+      flex-direction:column;
     }
 
     header {
-      background: #1a1a1f;
-      padding: 8px 15px;
-      display: flex;
-      justify-content: space-between;
-      border-bottom: 3px solid #ef4444;
-    }
-
-    .top-row {
-      display: flex;
-      gap: 8px;
-      padding: 10px;
-      background: #111114;
-      flex-wrap: wrap;
-    }
-
-    .panel {
-      background: #1f1f24;
-      padding: 10px;
-      border-radius: 6px;
-      border: 1px solid #333;
-      min-width: 180px;
+      background:#1a1a1f;
+      padding:10px;
+      border-bottom:3px solid #ef4444;
+      display:flex;
+      justify-content:space-between;
     }
 
     .content {
-      flex: 1;
-      padding: 12px;
-      overflow-y: auto;
-      display: flex;
-      gap: 12px;
+      flex:1;
+      display:flex;
+      gap:10px;
+      padding:10px;
     }
 
     .box {
-      background: #1f1f24;
-      border: 1px solid #444;
-      border-radius: 6px;
-      padding: 12px;
-      flex: 1;
+      background:#1f1f24;
+      border:1px solid #333;
+      padding:10px;
+      flex:1;
+      overflow:auto;
     }
 
-    .map-container {
-      height: 340px;
-      border-radius: 6px;
-      border: 1px solid #444;
+    .map {
+      height:100%;
+      border-radius:6px;
     }
 
     button {
-      background: #ef4444;
-      color: white;
-      border: none;
-      padding: 10px;
-      width: 100%;
-      margin: 5px 0;
-      cursor: pointer;
+      background:#ef4444;
+      border:none;
+      color:#fff;
+      padding:8px;
+      width:100%;
+      margin:5px 0;
+      cursor:pointer;
+    }
+
+    select, input, textarea {
+      width:100%;
+      margin:5px 0;
+      padding:6px;
+      background:#111;
+      color:#fff;
+      border:1px solid #333;
+    }
+
+    #unitPanel, #chatPanel {
+      position:fixed;
+      top:0;
+      left:0;
+      width:100%;
+      height:100%;
+      background:#0a0a0f;
+      display:none;
+      z-index:999;
+      padding:15px;
+      overflow:auto;
+    }
+
+    .panic {
+      background:#ff0000;
+      margin-top:5px;
+    }
+
+    .codeBox {
+      display:none;
+      background:#111;
+      padding:10px;
+      border:1px solid #333;
     }
   </style>
 </head>
@@ -113,103 +127,62 @@
 
 <!-- SIDEBAR -->
 <div class="sidebar">
-  <div class="logo">R6TBSARI<br><span style="font-size:0.8em;">MDT</span></div>
-
-  <div class="nav-item active">DASHBOARD</div>
-  <div class="nav-item">ASSIGNMENT</div>
-  <div class="nav-item">SEARCH</div>
-  <div class="nav-item">PAPERWORK</div>
-
-  <!-- UNIT BUTTON -->
+  <div class="logo">R6TBSARI<br>MDT</div>
+  <div class="nav-item">DASHBOARD</div>
   <div class="nav-item" onclick="openUnitPanel()">UNITS</div>
-
-  <div class="nav-item">SUPERVISOR</div>
+  <div class="nav-item" onclick="openChat()">UNIT CHAT</div>
 </div>
 
 <!-- MAIN -->
 <div class="main">
-
   <header>
-    <div><strong>🚨 R6TBSARI DISPATCH CENTER</strong></div>
-    <div style="color:#22c55e;">ONLINE • REAL-TIME SYNC</div>
+    <div>🚨 DISPATCH CENTER</div>
+    <div id="time"></div>
   </header>
 
-  <div class="top-row">
-    <div class="panel">
-      <strong>CURRENT TIME</strong><br>
-      <span id="time">--:--</span>
-    </div>
-
-    <div class="panel">
-      <strong>MY UNIT</strong><br>
-      <span style="color:#22c55e;">RESCUE 1 • IN SERVICE</span>
-    </div>
-
-    <div class="panel">
-      <strong>AVAILABLE UNITS</strong><br>
-      <span id="availableCount" style="color:#22c55e; font-size:1.5em;">0</span>
-    </div>
-  </div>
-
   <div class="content">
-
     <div class="box">
       <h3>ACTIVE CALLS</h3>
-      <div id="activeIncidents"></div>
+      <div id="calls"></div>
     </div>
 
-    <div class="box" style="flex:2;">
-      <h3>🗺️ INCIDENT MAP - ILOILO</h3>
-      <div id="map" class="map-container"></div>
+    <div class="box">
+      <h3>MAP</h3>
+      <div id="map" style="height:100%"></div>
     </div>
-
   </div>
 </div>
 
-<!-- ADMIN PANEL -->
-<div style="width:280px; background:#111114; padding:12px; border-left:1px solid #333;">
-  <div class="box" id="adminPanel" style="display:none;">
-    <h3>NEW CALL</h3>
-
-    <select id="callType">
-      <option>🔥 Structure Fire</option>
-      <option>🚑 Medical Emergency</option>
-      <option>🚗 Vehicle Accident</option>
-      <option>🛟 Rescue</option>
-    </select>
-
-    <input id="address" placeholder="Address">
-    <textarea id="details" rows="3" placeholder="Details"></textarea>
-
-    <button onclick="sendAlert()">🚨 DISPATCH</button>
-  </div>
-
-  <button onclick="loginAdmin()">🔐 Admin Login</button>
+<!-- UNIT PANEL -->
+<div id="unitPanel">
+  <h2>UNIT CONTROL</h2>
+  <button onclick="closeUnitPanel()">BACK</button>
+  <div id="unitList"></div>
 </div>
 
-<!-- UNIT FULL SCREEN PANEL -->
-<div id="unitPanel" style="
-  display:none;
-  position:fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
-  background:#0a0a0f;
-  z-index:999;
-  padding:20px;
-  overflow:auto;
-">
+<!-- CHAT PANEL -->
+<div id="chatPanel">
+  <h2>UNIT CHAT</h2>
+  <button onclick="closeChat()">BACK</button>
 
-  <h2>🚓 UNIT CONTROL SYSTEM</h2>
-  <button onclick="closeUnitPanel()">⬅ BACK</button>
+  <select id="sender">
+    <option>RESCUE 1</option>
+    <option>RESCUE 2</option>
+    <option>RESCUE 3</option>
+    <option>RESCUE 4</option>
+    <option>RESCUE 5</option>
+  </select>
 
-  <div id="unitPanelList"></div>
+  <textarea id="msg"></textarea>
+  <button onclick="sendMsg()">SEND</button>
+
+  <button onclick="toggleCodes()">10 CODE</button>
+  <div class="codeBox" id="codeBox"></div>
+
+  <button class="panic" onclick="panic()">🚨 PANIC</button>
+
+  <div id="chatLog"></div>
 </div>
-
-<audio id="alarmSound">
-  <source src="https://freesound.org/data/previews/66/66930_931655-lq.mp3">
-</audio>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="app.js"></script>
