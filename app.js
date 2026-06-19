@@ -1,149 +1,132 @@
-const BIN_ID = "6a35088cf5f4af5e290dfd57";
-const MASTER_KEY = "$2a$10$9tAozl0KM.tjp5SiZrLhr.pLYpLlnk1p5Veo/I1t9Rlj1y6IBCL2q";
-
 let map;
-let isAdmin = false;
-const ADMIN_PASSWORD = "IR6TB-018";
-
-let incidents = [];
 let units = [
-  {id:1,name:"RESCUE 1",status:"available"},
-  {id:2,name:"RESCUE 2",status:"available"},
-  {id:3,name:"RESCUE 3",status:"available"},
-  {id:4,name:"RESCUE 4",status:"available"},
-  {id:5,name:"RESCUE 5",status:"available"}
+  {id:1,name:"RESCUE 1",status:"available",panic:false,cooldown:0},
+  {id:2,name:"RESCUE 2",status:"available",panic:false,cooldown:0},
+  {id:3,name:"RESCUE 3",status:"available",panic:false,cooldown:0},
+  {id:4,name:"RESCUE 4",status:"available",panic:false,cooldown:0},
+  {id:5,name:"RESCUE 5",status:"available",panic:false,cooldown:0}
 ];
 
-// FETCH
-async function fetchData(){
-  try{
-    const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`,{
-      headers:{"X-Master-Key":MASTER_KEY}
-    });
+let incidents = [];
+let messages = [];
 
-    const data = await res.json();
-    incidents = data.record.incidents || [];
-    units = data.record.units || units;
-
-    updateUI();
-  }catch(e){}
-}
-
-// SAVE
-async function saveData(){
-  try{
-    await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`,{
-      method:"PUT",
-      headers:{
-        "Content-Type":"application/json",
-        "X-Master-Key":MASTER_KEY
-      },
-      body:JSON.stringify({incidents,units})
-    });
-  }catch(e){}
-}
-
-// MAP
 function initMap(){
-  map = L.map('map').setView([10.72,122.55],13);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+  map = L.map("map").setView([10.72,122.55],13);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 }
 
-// ADMIN
-function loginAdmin(){
-  const pass = prompt("Password:");
-  if(pass===ADMIN_PASSWORD){
-    isAdmin=true;
-    document.getElementById("adminPanel").style.display="block";
-  }
-}
-
-// ALERT
-function sendAlert(){
-  if(!isAdmin) return;
-
-  const inc = {
-    id:Date.now().toString(),
-    type:document.getElementById("callType").value,
-    address:document.getElementById("address").value,
-    details:document.getElementById("details").value,
-    status:"1st Alarm",
-    responders:[]
-  };
-
-  incidents.unshift(inc);
-  saveData();
-  updateUI();
-}
-
-// UNIT STATUS
-function changeUnitStatus(id,status){
-  const u = units.find(x=>x.id===id);
-  if(u) u.status=status;
-
-  saveData();
-  updateUI();
-}
-
-// OPEN UNIT PANEL
 function openUnitPanel(){
   document.getElementById("unitPanel").style.display="block";
-  renderUnitPanel();
+  renderUnits();
 }
 
-// CLOSE
 function closeUnitPanel(){
   document.getElementById("unitPanel").style.display="none";
 }
 
-// RENDER UNIT PANEL
-function renderUnitPanel(){
-  const box=document.getElementById("unitPanelList");
+function openChat(){
+  document.getElementById("chatPanel").style.display="block";
+}
 
-  box.innerHTML=units.map(u=>`
-    <div style="background:#1f1f24;padding:12px;margin:10px 0;display:flex;justify-content:space-between;">
-      <div>
-        <strong>${u.name}</strong><br>
-        <small>${u.status}</small>
-      </div>
+function closeChat(){
+  document.getElementById("chatPanel").style.display="none";
+}
 
-      <select onchange="changeUnitStatus(${u.id},this.value)">
-        <option value="available" ${u.status==="available"?"selected":""}>AVAILABLE</option>
-        <option value="responding" ${u.status==="responding"?"selected":""}>RESPONDING</option>
-        <option value="onscene" ${u.status==="onscene"?"selected":""}>ON SCENE</option>
-        <option value="busy" ${u.status==="busy"?"selected":""}>BUSY</option>
+function renderUnits(){
+  document.getElementById("unitList").innerHTML =
+  units.map(u=>`
+    <div style="border:1px solid #333;padding:10px;margin:5px">
+      <b>${u.name}</b><br>
+      ${u.status}
+      <select onchange="changeStatus(${u.id},this.value)">
+        <option>available</option>
+        <option>responding</option>
+        <option>onscene</option>
+        <option>busy</option>
       </select>
     </div>
   `).join("");
 }
 
-// UI
-function updateUI(){
-
-  document.getElementById("activeIncidents").innerHTML =
-    incidents.map(i=>`
-      <div class="box">
-        <strong>${i.type}</strong><br>
-        ${i.address}
-      </div>
-    `).join("") || "<em>No calls</em>";
-
-  document.getElementById("availableCount").textContent =
-    units.filter(u=>u.status==="available").length;
-
-  if(document.getElementById("unitPanel").style.display==="block"){
-    renderUnitPanel();
-  }
+function changeStatus(id,status){
+  let u = units.find(x=>x.id===id);
+  if(u) u.status=status;
 }
 
-// CLOCK
+function sendMsg(){
+  let sender=document.getElementById("sender").value;
+  let msg=document.getElementById("msg").value;
+
+  messages.push({sender,msg,time:new Date().toLocaleTimeString()});
+  renderChat();
+}
+
+function renderChat(){
+  document.getElementById("chatLog").innerHTML =
+  messages.map(m=>`<div><b>${m.sender}</b>: ${m.msg}</div>`).join("");
+}
+
+/* 10 CODE */
+function toggleCodes(){
+  let box=document.getElementById("codeBox");
+  box.style.display = box.style.display==="block"?"none":"block";
+
+  box.innerHTML = `
+    <div>10-4 Acknowledged</div>
+    <div>10-17 En route</div>
+    <div>10-20 Location</div>
+    <div>10-23 Arrived</div>
+    <div>10-50 Accident</div>
+    <div>10-52 Medical</div>
+    <div>10-70 Fire</div>
+  `;
+}
+
+/* PANIC SYSTEM */
+function panic(){
+  let u = units.find(x=>x.name==="RESCUE 1"); // example unit
+
+  if(u.cooldown > Date.now()){
+    alert("Panic cooldown active");
+    return;
+  }
+
+  let pos = map.getCenter();
+
+  let marker = L.marker([pos.lat,pos.lng]).addTo(map)
+  .bindPopup("🚨 PANIC ALERT: RESCUE UNIT");
+
+  messages.push({
+    sender:"SYSTEM",
+    msg:"🚨 PANIC ALERT ACTIVATED",
+    time:new Date().toLocaleTimeString()
+  });
+
+  u.cooldown = Date.now() + 300000; // 5 mins
+  renderChat();
+}
+
+/* ACTIVE CALLS */
+function addCall(type,desc,address){
+  let call={
+    type,
+    desc,
+    address,
+    time:new Date().toLocaleTimeString(),
+    status:"Active"
+  };
+
+  incidents.push(call);
+
+  let marker = L.marker([10.72,122.55]).addTo(map)
+  .bindPopup(type+"<br>"+address);
+}
+
 setInterval(()=>{
-  document.getElementById("time").textContent=
-    new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
+  document.getElementById("time").innerText =
+  new Date().toLocaleTimeString();
 },1000);
 
 window.onload=()=>{
   initMap();
-  fetchData();
-  updateUI();
 };
