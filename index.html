@@ -72,11 +72,6 @@
       overflow:auto;
     }
 
-    .map {
-      height:100%;
-      border-radius:6px;
-    }
-
     button {
       background:#ef4444;
       border:none;
@@ -87,7 +82,7 @@
       cursor:pointer;
     }
 
-    select, input, textarea {
+    select, textarea, input {
       width:100%;
       margin:5px 0;
       padding:6px;
@@ -96,7 +91,7 @@
       border:1px solid #333;
     }
 
-    #unitPanel, #chatPanel {
+    #unitChatPanel {
       position:fixed;
       top:0;
       left:0;
@@ -109,16 +104,12 @@
       overflow:auto;
     }
 
-    .panic {
-      background:#ff0000;
-      margin-top:5px;
-    }
-
-    .codeBox {
+    #codePanel {
       display:none;
       background:#111;
       padding:10px;
       border:1px solid #333;
+      margin-top:10px;
     }
   </style>
 </head>
@@ -128,8 +119,8 @@
 <!-- SIDEBAR -->
 <div class="sidebar">
   <div class="logo">R6TBSARI<br>MDT</div>
+
   <div class="nav-item">DASHBOARD</div>
-  <div class="nav-item" onclick="openUnitPanel()">UNITS</div>
   <div class="nav-item" onclick="openChat()">UNIT CHAT</div>
 </div>
 
@@ -153,18 +144,18 @@
   </div>
 </div>
 
-<!-- UNIT PANEL -->
-<div id="unitPanel">
-  <h2>UNIT CONTROL</h2>
-  <button onclick="closeUnitPanel()">BACK</button>
-  <div id="unitList"></div>
-</div>
+<!-- PANIC SOUND -->
+<audio id="panicSound">
+  <source src="https://freesound.org/data/previews/250/250629_4486188-lq.mp3">
+</audio>
 
-<!-- CHAT PANEL -->
-<div id="chatPanel">
-  <h2>UNIT CHAT</h2>
+<!-- UNIT CHAT PANEL -->
+<div id="unitChatPanel">
+
+  <h2>UNIT CHAT SYSTEM</h2>
   <button onclick="closeChat()">BACK</button>
 
+  <!-- LOCKED UNITS -->
   <select id="sender">
     <option>RESCUE 1</option>
     <option>RESCUE 2</option>
@@ -173,13 +164,22 @@
     <option>RESCUE 5</option>
   </select>
 
-  <textarea id="msg"></textarea>
+  <textarea id="msg" placeholder="Message"></textarea>
   <button onclick="sendMsg()">SEND</button>
 
   <button onclick="toggleCodes()">10 CODE</button>
-  <div class="codeBox" id="codeBox"></div>
 
-  <button class="panic" onclick="panic()">🚨 PANIC</button>
+  <div id="codePanel">
+    <div onclick="sendCode('10-4 Acknowledged')">10-4 Acknowledged</div>
+    <div onclick="sendCode('10-17 En route')">10-17 En route</div>
+    <div onclick="sendCode('10-20 Location')">10-20 Location</div>
+    <div onclick="sendCode('10-23 Arrived')">10-23 Arrived</div>
+    <div onclick="sendCode('10-50 Accident')">10-50 Accident</div>
+    <div onclick="sendCode('10-52 Medical')">10-52 Medical</div>
+    <div onclick="sendCode('10-70 Fire')">10-70 Fire</div>
+  </div>
+
+  <button onclick="panicTrigger()" style="background:red;">🚨 PANIC BUTTON</button>
 
   <div id="chatLog"></div>
 </div>
