@@ -6,6 +6,7 @@
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#ef4444">
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+
   <style>
     * { box-sizing: border-box; }
     body {
@@ -58,6 +59,8 @@
       padding: 12px;
       flex: 1;
     }
+    .map-container { height: 340px; border: 1px solid #444; border-radius: 6px; }
+
     button {
       background: #ef4444;
       color: white;
@@ -68,22 +71,29 @@
       width: 100%;
       margin: 5px 0;
     }
-    .map-container { height: 340px; border: 1px solid #444; border-radius: 6px; }
   </style>
 </head>
+
 <body>
 
+<!-- SIDEBAR -->
 <div class="sidebar">
   <div class="logo">R6TBSARI<br><span style="font-size:0.8em;">MDT</span></div>
+
   <div class="nav-item active">DASHBOARD</div>
   <div class="nav-item">ASSIGNMENT</div>
   <div class="nav-item">SEARCH</div>
   <div class="nav-item">PAPERWORK</div>
-  <div class="nav-item">UNITS</div>
+
+  <!-- UNIT BUTTON FIXED -->
+  <div class="nav-item" onclick="openUnitPanel()">UNITS</div>
+
   <div class="nav-item">SUPERVISOR</div>
 </div>
 
+<!-- MAIN -->
 <div class="main">
+
   <header>
     <div><strong>🚨 R6TBSARI DISPATCH CENTER</strong></div>
     <div style="color:#22c55e;">ONLINE • REAL-TIME SYNC</div>
@@ -92,19 +102,22 @@
   <div class="top-row">
     <div class="panel">
       <strong>CURRENT TIME</strong><br>
-      <span id="time" class="red" style="font-size:1.6em;">--:--</span>
+      <span id="time" style="font-size:1.6em;">--:--</span>
     </div>
+
     <div class="panel">
       <strong>MY UNIT</strong><br>
       <span style="color:#22c55e;">RESCUE 1 • IN SERVICE</span>
     </div>
+
     <div class="panel">
       <strong>AVAILABLE UNITS</strong><br>
-      <span style="font-size:1.8em; color:#22c55e;">5</span>
+      <span id="availableCount" style="font-size:1.8em; color:#22c55e;">5</span>
     </div>
   </div>
 
   <div class="content">
+
     <div class="box">
       <h3>ACTIVE CALLS</h3>
       <div id="activeIncidents"></div>
@@ -116,33 +129,60 @@
     </div>
 
     <div class="box">
-      <h3>UNIT STATUS</h3>
+      <h3>UNIT STATUS (Quick)</h3>
       <div id="unitList"></div>
     </div>
+
   </div>
 </div>
 
+<!-- ADMIN PANEL -->
 <div style="width:280px; background:#111114; padding:12px; border-left:1px solid #333;">
   <div class="box" id="adminPanel" style="display:none;">
     <h3>NEW CALL</h3>
+
     <select id="callType">
-      <option value="Structure Fire">🔥 Structure Fire</option>
-      <option value="Medical Emergency">🚑 Medical Emergency</option>
-      <option value="MVA">🚗 Vehicle Accident</option>
-      <option value="Rescue">🛟 Rescue</option>
+      <option>🔥 Structure Fire</option>
+      <option>🚑 Medical Emergency</option>
+      <option>🚗 Vehicle Accident</option>
+      <option>🛟 Rescue</option>
     </select>
+
     <input id="address" placeholder="Address">
     <textarea id="details" rows="3" placeholder="Details"></textarea>
+
     <button onclick="sendAlert()">🚨 DISPATCH CALL</button>
   </div>
-  <button onclick="loginAdmin()" style="background:#ef4444;">🔐 Admin Login</button>
+
+  <button onclick="loginAdmin()">🔐 Admin Login</button>
+</div>
+
+<!-- UNIT PANEL (NEW FULL SCREEN GUI) -->
+<div id="unitPanel" style="
+  display:none;
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:#0a0a0f;
+  z-index:999;
+  padding:20px;
+  overflow:auto;
+">
+
+  <h2>🚓 UNIT MANAGEMENT SYSTEM</h2>
+  <button onclick="closeUnitPanel()">⬅ BACK</button>
+
+  <div id="unitPanelList"></div>
 </div>
 
 <audio id="alarmSound" preload="auto">
-  <source src="https://freesound.org/data/previews/66/66930_931655-lq.mp3" type="audio/mpeg">
+  <source src="https://freesound.org/data/previews/66/66930_931655-lq.mp3">
 </audio>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="app.js"></script>
+
 </body>
-                               </html>
+</html>
