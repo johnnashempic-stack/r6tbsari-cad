@@ -1,4 +1,4 @@
-// === JSONBIN CONFIG (YOUR KEYS) ===
+// === JSONBIN CONFIG ===
 const BIN_ID = "6a35088cf5f4af5e290dfd57";
 const MASTER_KEY = "$2a$10$9tAozl0KM.tjp5SiZrLhr.pLYpLlnk1p5Veo/I1t9Rlj1y6IBCL2q";
 
@@ -16,10 +16,11 @@ let units = [
   {id:5, name: "RESCUE 5", status: "available"}
 ];
 let history = [];
+let mapMarkerPos = null;   // For syncing map marker
 
 const alarms = ["1st Alarm", "2nd Alarm", "3rd Alarm", "4th Alarm", "5th Alarm"];
 
-// Fetch latest data
+// Fetch all data
 async function fetchData() {
   try {
     const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
@@ -27,19 +28,24 @@ async function fetchData() {
     });
     if (res.ok) {
       const data = await res.json();
-      incidents = data.record.incidents || [];
-      history = data.record.history || [];
+      const record = data.record || {};
+      
+      incidents = record.incidents || [];
+      history = record.history || [];
+      units = record.units || units;
+      mapMarkerPos = record.mapMarkerPos || null;
+
       if (incidents.length > 0 && !currentIncidentId) {
         currentIncidentId = incidents[0].id;
       }
+      
       updateUI();
+      updateMapMarker();
     }
-  } catch (e) {
-    console.log("Sync failed, trying again...");
-  }
+  } catch (e) {}
 }
 
-// Save data to cloud
+// Save all data
 async function saveData() {
   try {
     await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
@@ -48,14 +54,17 @@ async function saveData() {
         "Content-Type": "application/json",
         "X-Master-Key": MASTER_KEY
       },
-      body: JSON.stringify({ incidents, history })
+      body: JSON.stringify({
+        incidents,
+        history,
+        units,
+        mapMarkerPos
+      })
     });
-  } catch (e) {
-    console.log("Save failed");
-  }
+  } catch (e) {}
 }
 
-// Auto refresh every 4 seconds
+// Auto sync every 4 seconds
 setInterval(fetchData, 4000);
 
 function initMap() {
@@ -64,9 +73,24 @@ function initMap() {
 
   map.on("click", e => {
     if (!isAdmin) return;
-    if (marker) map.removeLayer(marker);
-    marker = L.marker(e.latlng).addTo(map).bindPopup("Incident Location").openPopup();
+    updateMarker(e.latlng);
   });
+}
+
+function updateMarker(latlng) {
+  if (marker) map.removeLayer(marker);
+  marker = L.marker(latlng).addTo(map).bindPopup("Incident Location").openPopup();
+  mapMarkerPos = { lat: latlng.lat, lng: latlng.lng };
+  saveData();
+}
+
+function updateMapMarker() {
+  if (mapMarkerPos && !marker) {
+    marker = L.marker([mapMarkerPos.lat, mapMarkerPos.lng])
+      .addTo(map)
+      .bindPopup("Incident Location")
+      .openPopup();
+  }
 }
 
 function playSiren() {
@@ -86,6 +110,7 @@ function loginAdmin() {
   }
 }
 
+// ================== MAIN FUNCTIONS ==================
 function sendAlert() {
   if (!isAdmin) return;
   playSiren();
@@ -157,11 +182,15 @@ function respond() {
 
 function changeUnitStatus(unitId, newStatus) {
   const unit = units.find(u => u.id === unitId);
-  if (unit) unit.status = newStatus;
-  updateUI();
+  if (unit) {
+    unit.status = newStatus;
+    saveData();
+    updateUI();
+  }
 }
 
 function updateUI() {
+  // Active Incidents
   document.getElementById("activeIncidents").innerHTML = incidents.map(inc => `
     <div class="incident-item" onclick="currentIncidentId=${inc.id};updateUI()">
       <strong>${inc.address}</strong><br>
@@ -169,6 +198,7 @@ function updateUI() {
     </div>
   `).join("") || "<em>No active incidents</em>";
 
+  // Unit Status Board
   document.getElementById("unitList").innerHTML = units.map(u => `
     <div class="unit-item">
       <strong>${u.name}</strong>
@@ -180,6 +210,7 @@ function updateUI() {
     </div>
   `).join("");
 
+  // History
   document.getElementById("history").innerHTML = history.slice().reverse().map(h => `
     <div class="incident-item">
       📍 ${h.address}<br>
@@ -190,6 +221,6 @@ function updateUI() {
 
 window.onload = () => {
   initMap();
-  fetchData();           // Initial load
+  fetchData();        // Initial load
   updateUI();
 };
