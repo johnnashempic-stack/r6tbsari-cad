@@ -1,188 +1,201 @@
-const BIN_ID = "6a36000ef5f4af5e29128246";
-const MASTER_KEY = "$2a$10$xqh.MDd939MiRTFQpJ4GJebf7kSrK5dnmT/a8E0DG9bFNqdLW5vzS";
-const ADMIN_PASSWORD = "IR6TB-018";
+const ADMIN_PASS = "IR6TB-018";
 
-let map;
+let role = "responder";
 
-let incidents = [];
+let calls = [];
 let history = [];
-let units = [];
-let chatLog = [];
+let chat = [];
 
-let currentUser = { role: "responder", name: "" };
+let units = [
+  {id:1,name:"RESCUE 1",status:"AVAILABLE",takenBy:null},
+  {id:2,name:"RESCUE 2",status:"AVAILABLE",takenBy:null}
+];
 
-function isDispatch() {
-  return currentUser.role === "dispatch";
-}
-
-/* STATUS PER TYPE */
-const STATUS_BY_TYPE = {
-  "🔥 Structure Fire": [
-    "FOA",
-    "1st Alarm",
-    "2nd Alarm",
-    "Under Control",
-    "Fire Out"
-  ],
-  "🚑 Medical": [
-    "Stable",
-    "Serious",
-    "Critical",
-    "Transporting"
-  ],
-  "🛟 Rescue": [
-    "Search",
-    "Extraction",
-    "Complete"
-  ],
-  "🚗 MVA": [
-    "Minor",
-    "Severe",
-    "Entrapment",
-    "Road Cleared"
-  ]
-};
-
-/* MAP */
-function initMap() {
-  map = L.map('map').setView([10.72, 122.55], 13);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-}
-
-/* FETCH */
-async function fetchData() {
-  const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
-    headers: { "X-Master-Key": MASTER_KEY }
-  });
-
-  if (!res.ok) return;
-
-  const data = await res.json();
-  const r = data.record;
-
-  incidents = r.incidents || [];
-  history = r.history || [];
-  units = r.units || [];
-  chatLog = r.chat || [];
-
-  updateUI();
-  updateHistory();
-}
-
-/* SAVE */
-async function saveData() {
-  await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Master-Key": MASTER_KEY
-    },
-    body: JSON.stringify({ incidents, history, units, chat: chatLog })
-  });
+function isDispatch(){
+  return role === "dispatch";
 }
 
 /* LOGIN */
-function adminLogin() {
-  if (adminPass.value === ADMIN_PASSWORD) {
-    currentUser.role = "dispatch";
-    adminBox.style.display = "none";
-    dispatchControls.style.display = "block";
+function login(){
+  if(pass.value === ADMIN_PASS){
+    role = "dispatch";
+    dispatchUI.style.display = "block";
   }
 }
 
-function logoutAdmin() {
-  currentUser.role = "responder";
-  adminBox.style.display = "block";
-  dispatchControls.style.display = "none";
+function logout(){
+  role = "responder";
+  dispatchUI.style.display = "none";
 }
 
-/* NEW CALL */
-function newCall() {
-  if (!isDispatch()) return;
+/* CALL SYSTEM */
+const STATUS = {
+  "🔥 Fire":["FOA","1st Alarm","Under Control","Fire Out"],
+  "🚑 Medical":["Stable","Critical","Transporting"],
+  "🛟 Rescue":["Search","Complete"],
+  "🚗 MVA":["Minor","Road Cleared"]
+};
 
-  incidents.unshift({
-    id: Date.now(),
-    type: callType.value,
-    address: address.value,
-    details: details.value,
-    incidentStatus: "ACTIVE"
+const END = {
+  "🔥 Fire":["Fire Out"],
+  "🚑 Medical":["Transporting"],
+  "🛟 Rescue":["Complete"],
+  "🚗 MVA":["Road Cleared"]
+};
+
+function createCall(){
+  if(!isDispatch()) return;
+
+  calls.unshift({
+    id:Date.now(),
+    type:type.value,
+    address:address.value,
+    details:details.value,
+    status:"ACTIVE"
   });
 
-  saveData();
+  renderCalls();
 }
 
 /* STATUS */
-function setStatus(id, status) {
-  if (!isDispatch()) return;
+function setStatus(id,status){
 
-  const call = incidents.find(c => c.id === id);
-  if (!call) return;
+  if(!isDispatch()) return;
 
-  call.incidentStatus = status;
+  let c = calls.find(x=>x.id===id);
+  if(!c) return;
 
-  if (status === "Fire Out" || status === "Road Cleared" || status === "Complete") {
-    history.unshift(call);
-    incidents = incidents.filter(c => c.id !== id);
+  c.status = status;
+
+  if(END[c.type]?.includes(status)){
+    history.unshift(c);
+    calls = calls.filter(x=>x.id!==id);
   }
 
-  saveData();
+  renderCalls();
 }
 
-/* UI */
-function updateUI() {
-  const box = document.getElementById("activeIncidents");
+/* REMOVE */
+function removeCall(id){
+  if(!isDispatch()) return;
+
+  let c = calls.find(x=>x.id===id);
+  if(!c) return;
+
+  history.unshift({...c,status:"REMOVED"});
+  calls = calls.filter(x=>x.id!==id);
+
+  renderCalls();
+}
+
+/* RENDER CALLS */
+function renderCalls(){
+
+  const box = callsPanel;
   box.innerHTML = "";
 
-  incidents.forEach(c => {
+  calls.forEach(c=>{
 
-    const buttons = (STATUS_BY_TYPE[c.type] || [])
-      .map(s => `<button onclick="setStatus(${c.id},'${s}')">${s}</button>`)
-      .join("");
+    let btn = "";
+
+    if(isDispatch()){
+      btn = (STATUS[c.type]||[])
+        .map(s=>`<button onclick="setStatus(${c.id},'${s}')">${s}</button>`)
+        .join("")
+        + `<button onclick="removeCall(${c.id})">REMOVE</button>`;
+    }
 
     box.innerHTML += `
-      <div class="call-card">
+      <div class="card">
         <b>${c.type}</b><br>
         ${c.address}<br>
-        ${c.incidentStatus}<br><br>
-        ${isDispatch() ? buttons : ""}
+        ${c.status}<br><br>
+        ${btn}
       </div>
     `;
   });
 }
 
-/* HISTORY */
-function updateHistory() {
-  const box = document.getElementById("historyList");
-  box.innerHTML = history.map(h => `
-    <div class="call-card">
-      <b>${h.type}</b><br>
-      ${h.address}<br>
-      ${h.incidentStatus}
-    </div>
-  `).join("");
+/* UNITS */
+const UNIT_STATUS = ["AVAILABLE","ENROUTE","ON SCENE","RETURNING","OOS"];
+
+function selectUnit(id){
+
+  if(role !== "responder") return;
+
+  let u = units.find(x=>x.id===id);
+  if(!u) return;
+
+  if(u.takenBy && u.takenBy !== "YOU") return;
+
+  units.forEach(x=>{
+    if(x.takenBy==="YOU") x.takenBy=null;
+  });
+
+  u.takenBy="YOU";
+}
+
+function changeUnitStatus(id,status){
+
+  if(role !== "responder") return;
+
+  let u = units.find(x=>x.id===id);
+  if(!u || u.takenBy!=="YOU") return;
+
+  u.status = status;
+}
+
+function renderUnits(){
+
+  const box = unitsPanel;
+  box.innerHTML = "";
+
+  units.forEach(u=>{
+
+    let btn = "";
+
+    if(!u.takenBy && role==="responder"){
+      btn += `<button onclick="selectUnit(${u.id})">TAKE UNIT</button>`;
+    }
+
+    if(u.takenBy==="YOU"){
+      btn += UNIT_STATUS.map(s=>
+        `<button onclick="changeUnitStatus(${u.id},'${s}')">${s}</button>`
+      ).join("");
+    }
+
+    box.innerHTML += `
+      <div class="card">
+        <b>${u.name}</b><br>
+        ${u.status}<br>
+        ${btn}
+      </div>
+    `;
+  });
 }
 
 /* CHAT */
-function sendMessage() {
-  chatLog.push({
-    name: chatName.value || "UNIT",
-    msg: chatInput.value,
-    time: new Date().toLocaleTimeString()
-  });
-
-  chatInput.value = "";
-  saveData();
+function renderChat(){
+  const box = chatPanel;
+  box.innerHTML = chat.map(m=>`<div>${m.msg}</div>`).join("");
 }
 
 /* VIEW SWITCH */
-function setView(v) {
-  document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
-  document.getElementById(v + "Page").classList.add("active");
+function view(v){
+
+  callsPanel.style.display="none";
+  unitsPanel.style.display="none";
+  chatPanel.style.display="none";
+
+  if(v==="calls") callsPanel.style.display="block";
+  if(v==="units") unitsPanel.style.display="block";
+  if(v==="chat") chatPanel.style.display="block";
 }
 
 /* INIT */
-window.onload = () => {
-  initMap();
-  fetchData();
-  setView("calls");
+window.onload = ()=>{
+  view("calls");
+  renderCalls();
+  renderUnits();
+  renderChat();
 };
