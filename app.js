@@ -1,164 +1,119 @@
-const BIN_ID = "6a36000ef5f4af5e29128246";
-const API_KEY = "$2a$10$xqh.MDd939MiRTFQpJ4GJebf7kSrK5dnmT/a8E0DG9bFNqdLW5vzS";
-const URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+// FD MDT - Fire Rescue SAR (Orange & Black Theme)
+let units = [
+    {id: "Rescue-1", status: "Available", location: "Station 1"},
+    {id: "Rescue-2", status: "Available", location: "Station 2"},
+    {id: "SAR-3", status: "Available", location: "Heli Base"},
+    {id: "Heavy-4", status: "Available", location: "Station 3"}
+];
 
-let role = null;
 let calls = [];
-let presence = {};
-let map;
-let started = false;
+let logEntries = [];
+let currentUser = {name: "", role: ""};
 
-/* SAFE LOG */
-function log(msg){
-    console.log(msg);
+function login() {
+    const user = document.getElementById("login-user").value || "User";
+    const role = document.getElementById("login-role").value;
+    currentUser = {name: user, role: role};
+    
+    document.getElementById("login-screen").style.display = "none";
+    document.getElementById("main-ui").style.display = "flex";
+    document.getElementById("user-info").style.display = "block";
+    document.getElementById("username").textContent = user;
+    document.getElementById("role").textContent = role;
+    
+    renderUnits();
+    renderCalls();
+    addLog("System", `\( {user} ( \){role}) logged in`);
 }
 
-/* BOOT CHECK (CRITICAL FIX) */
-window.onload = () => {
-    console.log("CAD LOADED OK");
-};
-
-/* LOGIN SYSTEM */
-function adminLogin(){
-    const pass = prompt("Dispatch Access Code:");
-
-    if(pass === "IR6TBSARI"){
-        role = "dispatcher";
-        startSystem();
-    } else {
-        alert("ACCESS DENIED");
-    }
+function logout() {
+    document.getElementById("main-ui").style.display = "none";
+    document.getElementById("login-screen").style.display = "block";
+    calls = [];
+    logEntries = [];
 }
 
-function unitLogin(){
-    role = "field";
-    startSystem();
+function switchTab(n) {
+    document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', i===n));
+    document.querySelectorAll('.panel').forEach((p,i) => p.classList.toggle('active', i===n));
 }
 
-/* MAIN START (FIXED FLOW) */
-function startSystem(){
-    if(started) return;
-    started = true;
-
-    document.getElementById("startScreen").style.display = "none";
-    document.getElementById("main").style.display = "block";
-
-    if(role === "dispatcher"){
-        document.getElementById("toolbar").style.display = "block";
-    }
-
-    setTimeout(initMap, 200);
-    loadData();
-
-    setInterval(loadData, 3000);
+function addLog(user, message) {
+    const time = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    logEntries.unshift(`[${time}] ${user}: ${message}`);
+    if (logEntries.length > 50) logEntries.pop();
+    document.getElementById("dispatch-log").innerHTML = logEntries.join("<br>");
 }
 
-/* MAP FIX (IMPORTANT) */
-function initMap(){
-    if(map) return;
-
-    map = L.map("map").setView([10.7202, 122.5621], 13);
-
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "© OpenStreetMap"
-    }).addTo(map);
-
-    setTimeout(() => map.invalidateSize(), 300);
-}
-
-/* LOAD DATA (SAFE) */
-async function loadData(){
-    try{
-        const res = await fetch(URL, {
-            headers: { "X-Master-Key": API_KEY }
-        });
-
-        const data = await res.json();
-
-        calls = data.record.calls || [];
-        presence = data.record.presence || {};
-
-        render();
-    } catch(err){
-        console.log("LOAD ERROR:", err);
-    }
-}
-
-/* SAVE DATA */
-async function saveData(){
-    await fetch(URL, {
-        method: "PUT",
-        headers: {
-            "Content-Type": "application/json",
-            "X-Master-Key": API_KEY
-        },
-        body: JSON.stringify({
-            calls,
-            presence
-        })
+function renderUnits() {
+    let html = "";
+    units.forEach(u => {
+        html += `<div class="unit">
+            <strong>${u.id}</strong> - ${u.status} @ ${u.location}
+            \( {currentUser.role === "Dispatch" ? `<button onclick="assignUnit(' \){u.id}')">Assign</button>` : ''}
+        </div>`;
     });
+    document.getElementById("units-list").innerHTML = html;
 }
 
-/* CREATE CALL */
-function createCall(){
-    if(role !== "dispatcher"){
-        alert("DISPATCH ONLY");
+function renderCalls() {
+    let html = calls.length ? "" : "<p style='color:#ffaa00;'>No active calls. Dispatch can create one.</p>";
+    calls.forEach((c, i) => {
+        html += `<div class="call">
+            <strong>${c.type}</strong> | \( {c.location} | Status: <span class="status- \){c.status.toLowerCase().replace(' ','-')}">${c.status}</span><br>
+            Units: ${c.units.join(", ") || "None"}<br>
+            <button onclick="updateCallStatus(${i}, 'Enroute')">Enroute</button>
+            <button onclick="updateCallStatus(${i}, 'Arrived')">Arrived</button>
+            <button onclick="updateCallStatus(${i}, 'Cleared')">Clear</button>
+            \( {currentUser.role === "Dispatch" ? `<button onclick="removeCall( \){i})">Remove</button>` : ''}
+        </div>`;
+    });
+    document.getElementById("calls-list").innerHTML = html;
+}
+
+function createCall() {
+    if (currentUser.role !== "Dispatch") {
+        alert("Only Dispatch can create calls.");
         return;
     }
-
-    const type = prompt("CALL TYPE:");
-    const loc = prompt("LOCATION:");
-
-    if(!type || !loc) return;
-
-    calls.unshift({
-        id: Date.now(),
-        type,
-        location: loc,
-        status: "DISPATCHED"
-    });
-
-    saveData();
-    render();
-}
-
-/* RESPOND */
-function respond(id){
-    let c = calls.find(x => x.id === id);
-    if(!c) return;
-
-    c.status = "RESPONDING";
-
-    saveData();
-    render();
-}
-
-/* RENDER UI */
-function render(){
-    const panel = document.getElementById("panel");
-
-    panel.innerHTML = "<h3>ACTIVE CALLS</h3>";
-
-    if(calls.length === 0){
-        panel.innerHTML += "<p>No active calls</p>";
-        return;
+    const type = prompt("Call Type:", "MVC with Entrapment");
+    const loc = prompt("Location:", "Highway 101 @ Mile 45");
+    if (type && loc) {
+        calls.push({ type: type, location: loc, status: "Pending", units: [] });
+        addLog("Dispatch", `New call: ${type} at ${loc}`);
+        renderCalls();
     }
-
-    calls.forEach(c => {
-        const div = document.createElement("div");
-
-        div.style.border = "1px solid #ffaa00";
-        div.style.margin = "10px";
-        div.style.padding = "10px";
-        div.style.background = "#1a1a1a";
-
-        div.innerHTML = `
-            <b>${c.type}</b><br>
-            📍 ${c.location}<br>
-            STATUS: ${c.status}<br><br>
-            <button onclick="respond(${c.id})">RESPOND</button>
-        `;
-
-        panel.appendChild(div);
-    });
 }
+
+function updateCallStatus(index, newStatus) {
+    if (calls[index]) {
+        calls[index].status = newStatus;
+        addLog(currentUser.name, `Call updated to ${newStatus}`);
+        renderCalls();
+    }
+}
+
+function removeCall(index) {
+    if (currentUser.role === "Dispatch" && confirm("Remove this call?")) {
+        addLog("Dispatch", `Call cleared: ${calls[index].type}`);
+        calls.splice(index, 1);
+        renderCalls();
+    }
+}
+
+function assignUnit(unitId) {
+    if (currentUser.role !== "Dispatch") return;
+    if (calls.length === 0) { alert("Create a call first."); return; }
+    
+    const callIndex = parseInt(prompt("Assign to call index (0 = first call):", "0"));
+    if (calls[callIndex]) {
+        calls[callIndex].units.push(unitId);
+        const unit = units.find(u => u.id === unitId);
+        if (unit) unit.status = "Assigned";
+        addLog("Dispatch", `Assigned ${unitId} to call`);
+        renderUnits();
+        renderCalls();
+    }
+}
+
+console.log("%cFD MDT Orange & Black Theme Loaded", "color:#ff8800; font-size:16px; font-weight:bold");
