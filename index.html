@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mobile Data Terminal</title>
+<title>Rescue Data Terminal</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
 <style>
 body{
-    font-family: monospace;
     margin:0;
+    font-family:monospace;
     background:#0a0a0a;
     color:#00ff66;
     overflow:hidden;
@@ -18,19 +18,19 @@ body{
 
 header{
     background:#000;
-    padding:8px;
+    padding:10px;
     text-align:center;
-    border-bottom:4px solid #ffaa00;
-    font-size:18px;
+    border-bottom:3px solid #ffaa00;
     font-weight:bold;
+    font-size:18px;
 }
 
 .toolbar{
-    background:#1a1a1a;
-    padding:6px;
     display:flex;
     flex-wrap:wrap;
-    gap:4px;
+    gap:5px;
+    padding:6px;
+    background:#111;
     border-bottom:2px solid #ffaa00;
 }
 
@@ -38,61 +38,96 @@ button{
     background:#003300;
     color:#00ff66;
     border:2px solid #00aa00;
-    padding:10px 12px;
+    padding:10px;
     cursor:pointer;
-    font-family:monospace;
     font-weight:bold;
-    min-width:110px;
+    min-width:120px;
 }
 
-button:hover{ background:#00aa00; color:#000; }
+button:hover{
+    background:#00aa00;
+    color:#000;
+}
 
-.container{ display:flex; height:calc(100vh - 210px); }
+.container{
+    display:flex;
+    height:calc(100vh - 220px);
+}
 
 .sidebar{
     width:340px;
     background:#111;
-    padding:12px;
+    padding:10px;
     overflow-y:auto;
     border-right:3px solid #ffaa00;
 }
 
-.map{ flex:1; }
+#map{
+    width:100%;
+    height:100%;
+}
 
-#map{ width:100%; height:100%; }
-
-.status-bar{
-    background:#000;
-    padding:8px;
-    display:flex;
-    justify-content:space-between;
-    border-top:3px solid #ffaa00;
+.map{
+    flex:1;
 }
 
 .log{
-    height:130px;
-    overflow-y:auto;
+    height:120px;
     background:#000;
     padding:8px;
+    overflow-y:auto;
     border-top:2px solid #333;
 }
 
-.incident-card{
+/* INCIDENT */
+.card{
     border:2px solid #ffaa00;
-    padding:10px;
     margin:10px 0;
+    padding:10px;
     background:#1a1a1a;
 }
 
-.priority-high{ border-color:#ff4444; }
+.high{border-color:#ff4444;}
 
-select{
-    width:100%;
-    padding:6px;
-    margin:5px 0;
-    background:#222;
-    color:#00ff66;
-    border:1px solid #555;
+/* MODALS */
+.modal{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.95);
+    justify-content:center;
+    align-items:center;
+}
+
+.modal-box{
+    background:#111;
+    border:3px solid #ffaa00;
+    padding:25px;
+    text-align:center;
+    width:320px;
+}
+
+/* UNIT SCREEN */
+#unitScreen{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:#000;
+    justify-content:center;
+    align-items:center;
+}
+
+.unit-box{
+    background:#111;
+    border:3px solid #ffaa00;
+    padding:30px;
+    text-align:center;
+}
+
+.unit-btn{
+    display:block;
+    margin:8px auto;
+    width:200px;
 }
 </style>
 </head>
@@ -100,27 +135,26 @@ select{
 <body>
 
 <header>
-FD MDT • ENGINE 1
-<p id="role-indicator" style="color:#ffaa00;font-size:12px;">FIELD UNIT</p>
+RESCUE CAD • ILOILO DISPATCH CENTER
+<p id="roleText" style="color:#ffaa00;font-size:12px;">FIELD UNIT</p>
 
-<button onclick="showLogin()" id="login-btn"
-style="position:absolute;right:10px;top:8px;background:#ffaa00;color:#000;">
+<button onclick="openLogin()" id="loginBtn"
+style="position:absolute;right:10px;top:10px;background:#ffaa00;color:#000;">
 DISPATCH LOGIN
 </button>
 
-<button onclick="logout()" id="logout-btn"
-style="display:none;position:absolute;right:10px;top:8px;background:#aa0000;color:#fff;">
+<button onclick="logout()" id="logoutBtn"
+style="display:none;position:absolute;right:10px;top:10px;background:#aa0000;color:#fff;">
 LOGOUT
 </button>
 </header>
 
 <div class="toolbar">
-<button onclick="createIncident()">NEW CALL</button>
+<button onclick="createCall()">NEW CALL</button>
 <button onclick="updateStatus('EN ROUTE')">EN ROUTE</button>
 <button onclick="updateStatus('ON SCENE')">ON SCENE</button>
 <button onclick="updateStatus('AVAILABLE')">AVAILABLE</button>
-<button onclick="sendMessage()">RADIO</button>
-<button onclick="enterFieldMode()">FIELD MODE</button>
+<button onclick="openUnitMenu()">SELECT UNIT</button>
 </div>
 
 <div class="container">
@@ -128,24 +162,30 @@ LOGOUT
 <div class="map"><div id="map"></div></div>
 </div>
 
-<div class="status-bar">
-<span>CAD: <b>CONNECTED</b></span>
-<span>UNIT: <span id="current-unit">NONE</span></span>
-<span>STATUS: <span id="unit-status">IDLE</span></span>
-</div>
-
 <div class="log" id="log"></div>
 
 <!-- LOGIN -->
-<div id="login-screen" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.95);justify-content:center;align-items:center;">
-<div style="background:#111;padding:40px;border:3px solid #ffaa00;width:360px;text-align:center;">
-<h2 style="color:#ffaa00;">DISPATCH ACCESS</h2>
+<div class="modal" id="loginModal">
+<div class="modal-box">
+<h3>DISPATCH LOGIN</h3>
+<input id="user" placeholder="username" style="width:100%;padding:8px;margin:5px;">
+<input id="pass" type="password" placeholder="password" style="width:100%;padding:8px;margin:5px;">
+<button onclick="login()">LOGIN</button>
+<button onclick="closeLogin()">CANCEL</button>
+</div>
+</div>
 
-<input id="username" placeholder="Username" style="width:100%;padding:10px;margin:10px 0;">
-<input id="password" type="password" placeholder="Password" style="width:100%;padding:10px;margin:10px 0;">
+<!-- UNIT SELECTION -->
+<div id="unitScreen">
+<div class="unit-box">
+<h2>SELECT RESCUE UNIT</h2>
 
-<button onclick="attemptLogin()" style="background:#ffaa00;color:#000;padding:10px;">LOGIN</button>
-<button onclick="cancelLogin()" style="background:#333;color:#fff;padding:10px;">CANCEL</button>
+<button class="unit-btn" onclick="selectUnit('RESCUE 1')">RESCUE 1</button>
+<button class="unit-btn" onclick="selectUnit('RESCUE 2')">RESCUE 2</button>
+<button class="unit-btn" onclick="selectUnit('RESCUE 3')">RESCUE 3</button>
+<button class="unit-btn" onclick="selectUnit('RESCUE 4')">RESCUE 4</button>
+<button class="unit-btn" onclick="selectUnit('RESCUE 5')">RESCUE 5</button>
+
 </div>
 </div>
 
