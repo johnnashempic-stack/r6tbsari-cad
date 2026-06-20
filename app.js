@@ -1,173 +1,84 @@
-const BIN_ID = "6a36000ef5f4af5e29128246";
-const API_KEY = "YOUR_KEY";
-const URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RESCUE CAD • ILOILO</title>
 
-let map;
-let calls = [];
-let role = "field";
-let selectedUnit = null;
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
-/* LOG */
-function log(msg){
-    const el=document.getElementById("log");
-    const t=new Date().toLocaleTimeString();
-    el.innerHTML += `[${t}] ${msg}<br>`;
-    el.scrollTop = el.scrollHeight;
+<style>
+body{
+    margin:0;
+    font-family:monospace;
+    background:#000;
+    color:#00ff66;
 }
 
-/* LOAD */
-async function loadData(){
-    const res = await fetch(URL,{
-        headers: {"X-Master-Key":API_KEY}
-    });
-
-    const data = await res.json();
-    calls = data.record.calls || [];
-    render();
+#startScreen{
+    position:fixed;
+    inset:0;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    background:#000;
 }
 
-/* SAVE */
-async function saveData(){
-    await fetch(URL,{
-        method:"PUT",
-        headers:{
-            "Content-Type":"application/json",
-            "X-Master-Key":API_KEY
-        },
-        body: JSON.stringify({ calls })
-    });
+.box{
+    background:#111;
+    border:3px solid #ffaa00;
+    padding:30px;
+    text-align:center;
 }
 
-/* MAP ILOILO */
-function initMap(){
-    map = L.map("map").setView([10.7202,122.5621],13);
-
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
-        attribution:"© OpenStreetMap"
-    }).addTo(map);
-
-    setTimeout(()=>map.invalidateSize(),200);
+button{
+    padding:10px;
+    margin:10px;
+    width:200px;
+    background:#003300;
+    color:#00ff66;
+    border:2px solid #00aa00;
+    cursor:pointer;
 }
 
-/* UNIT SELECT (NO PASSWORD) */
-function selectUnit(unit){
-    selectedUnit = unit;
-
-    document.getElementById("unitScreen").style.display="none";
-    document.getElementById("main").style.display="flex";
-    document.getElementById("toolbar").style.display="flex";
-
-    document.getElementById("roleText").innerText = unit;
-
-    initMap();
-    loadData();
-
-    log(`UNIT ONLINE: ${unit}`);
+#main{
+    display:none;
 }
 
-/* DISPATCH LOGIN ONLY */
-function dispatchLogin(){
-    const pass = prompt("Dispatch Access Code:");
-
-    if(pass === "IR6TBSARI"){
-        role = "dispatcher";
-        alert("DISPATCH MODE ENABLED");
-        log("Dispatcher logged in");
-    } else {
-        alert("ACCESS DENIED");
-    }
+.toolbar{
+    display:none;
+    background:#111;
+    padding:6px;
+    border-bottom:2px solid #ffaa00;
 }
+</style>
+</head>
 
-/* CREATE CALL (DISPATCH ONLY) */
-function createCall(){
-    if(role !== "dispatcher"){
-        alert("DISPATCH ONLY");
-        return;
-    }
+<body>
 
-    const type = prompt("CALL TYPE:");
-    const loc = prompt("LOCATION:");
+<!-- START SCREEN -->
+<div id="startScreen">
+<div class="box">
+<h2>RESCUE CAD SYSTEM</h2>
 
-    if(!type || !loc) return;
+<button onclick="adminLogin()">DISPATCH LOGIN</button>
+<button onclick="unitLogin()">UNIT LOGIN</button>
+</div>
+</div>
 
-    calls.unshift({
-        id: Date.now(),
-        type,
-        location: loc,
-        status: "DISPATCHED",
-        assignedUnit: null
-    });
+<!-- MAIN -->
+<div id="main">
 
-    saveData();
-    render();
-}
+<div class="toolbar" id="toolbar">
+<button onclick="createCall()">NEW CALL</button>
+</div>
 
-/* FIELD RESPOND */
-function respond(id){
-    let c = calls.find(x=>x.id===id);
-    if(!c) return;
+<div id="map" style="height:80vh;"></div>
 
-    c.assignedUnit = selectedUnit;
-    c.status = "RESPONDING";
+</div>
 
-    saveData();
-    render();
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="app.js"></script>
 
-    log(`${selectedUnit} RESPONDING`);
-}
-
-/* STATUS */
-function setStatus(status){
-    if(!selectedUnit) return;
-
-    log(`${selectedUnit} → ${status}`);
-}
-
-/* END INCIDENT */
-function endIncident(id){
-    if(role !== "dispatcher"){
-        alert("DISPATCH ONLY");
-        return;
-    }
-
-    calls = calls.filter(c=>c.id!==id);
-
-    saveData();
-    render();
-
-    log(`INCIDENT CLOSED #${id}`);
-}
-
-/* RENDER */
-function render(){
-    const s=document.getElementById("sidebar");
-    s.innerHTML="<h3>ACTIVE CALLS</h3>";
-
-    if(calls.length===0){
-        s.innerHTML+="No calls";
-        return;
-    }
-
-    calls.forEach(c=>{
-        let div=document.createElement("div");
-        div.style.border="2px solid #ffaa00";
-        div.style.margin="10px";
-        div.style.padding="10px";
-        div.style.background="#1a1a1a";
-
-        div.innerHTML=`
-        <b>#${c.id} ${c.type}</b><br>
-        📍 ${c.location}<br>
-        STATUS: ${c.status}<br>
-        UNIT: ${c.assignedUnit || "NONE"}<br><br>
-
-        <button onclick="respond(${c.id})">RESPOND</button>
-        <button onclick="endIncident(${c.id})">END</button>
-        `;
-
-        s.appendChild(div);
-    });
-}
-
-/* SYNC */
-setInterval(loadData,3000);
+</body>
+</html>
