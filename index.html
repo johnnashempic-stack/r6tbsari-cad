@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RESCUE MDT • ILOILO</title>
+<title>RESCUE CAD • ILOILO</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
@@ -16,7 +16,6 @@ body{
     overflow:hidden;
 }
 
-/* HEADER */
 header{
     background:#000;
     padding:10px;
@@ -25,13 +24,12 @@ header{
     font-weight:bold;
 }
 
-/* TOOLBAR */
 .toolbar{
     display:none;
-    gap:5px;
     padding:6px;
     background:#111;
     border-bottom:2px solid #ffaa00;
+    gap:5px;
 }
 
 button{
@@ -39,12 +37,11 @@ button{
     color:#00ff66;
     border:2px solid #00aa00;
     padding:10px;
-    cursor:pointer;
-    font-weight:bold;
     min-width:120px;
+    font-weight:bold;
+    cursor:pointer;
 }
 
-/* MAIN LAYOUT */
 .container{
     display:none;
     height:calc(100vh - 200px);
@@ -63,7 +60,8 @@ button{
     height:100%;
 }
 
-/* LOG */
+.map{flex:1;}
+
 .log{
     height:120px;
     background:#000;
@@ -72,30 +70,21 @@ button{
     border-top:2px solid #333;
 }
 
-/* INCIDENT */
-.card{
-    border:2px solid #ffaa00;
-    margin:10px 0;
-    padding:10px;
-    background:#1a1a1a;
-}
-
-/* MODALS FIX */
-.modal, #unitScreen{
+/* UNIT SCREEN */
+#unitScreen{
     position:fixed;
     inset:0;
     display:flex;
     justify-content:center;
     align-items:center;
     background:#000;
-    z-index:99999;
+    z-index:9999;
 }
 
-/* UNIT BOX */
 .unit-box{
     background:#111;
     border:3px solid #ffaa00;
-    padding:30px;
+    padding:25px;
     text-align:center;
 }
 
@@ -109,12 +98,12 @@ button{
 
 <body>
 
-<header> 
-RESCUE MDT • ILOILO DISPATCH
+<header>
+RESCUE CAD • ILOILO DISPATCH SYSTEM
 <p id="roleText">SELECT UNIT</p>
 </header>
 
-<!-- UNIT SELECTION FIRST -->
+<!-- UNIT SELECT -->
 <div id="unitScreen">
 <div class="unit-box">
 <h2>SELECT RESCUE UNIT</h2>
