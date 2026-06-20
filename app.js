@@ -1,273 +1,163 @@
-// ================== CONFIG ==================
 const BIN_ID = "6a36000ef5f4af5e29128246";
 const MASTER_KEY = "$2a$10$xqh.MDd939MiRTFQpJ4GJebf7kSrK5dnmT/a8E0DG9bFNqdLW5vzS";
 const ADMIN_PASSWORD = "IR6TB-018";
 
-// ================== STATE ==================
 let map;
-
 let incidents = [];
-let units = [
-  { id: 1, name: "RESCUE 1", status: "available" },
-  { id: 2, name: "RESCUE 2", status: "available" },
-  { id: 3, name: "RESCUE 3", status: "available" },
-  { id: 4, name: "RESCUE 4", status: "available" },
-  { id: 5, name: "RESCUE 5", status: "available" }
-];
-
+let history = [];
+let units = [];
 let chatLog = [];
-let isAdmin = false;
+
+let currentUser = { role: "viewer", name: "" };
 let lastUpdate = 0;
 
-// ================== INIT ==================
-window.onload = () => {
-  initMap();
-  fetchData();
-  updateUI();
-  updateUnitsUI();
-  updateChatUI();
-};
-
-// ================== MAP ==================
+// MAP
 function initMap() {
   map = L.map('map').setView([10.72, 122.55], 13);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19
-  }).addTo(map);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 }
 
-// ================== SYNC ==================
+// FETCH
 async function fetchData() {
-  try {
-    const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
-      headers: { "X-Master-Key": MASTER_KEY }
-    });
+  const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+    headers: { "X-Master-Key": MASTER_KEY }
+  });
 
-    if (!res.ok) return;
+  if (!res.ok) return;
 
-    const data = await res.json();
-    const record = data.record;
+  const data = await res.json();
+  const r = data.record;
 
-    if (record.lastUpdate && record.lastUpdate <= lastUpdate) return;
+  incidents = r.incidents || [];
+  history = r.history || [];
+  units = r.units || [];
+  chatLog = r.chat || [];
 
-    lastUpdate = record.lastUpdate || Date.now();
-
-    incidents = record.incidents || [];
-    units = record.units || units;
-    chatLog = record.chat || [];
-
-    updateUI();
-    updateUnitsUI();
-    updateChatUI();
-
-  } catch (e) {}
+  updateUI();
+  updateHistory();
 }
 
 setInterval(fetchData, 1500);
 
-// ================== SAVE ==================
+// SAVE
 async function saveData() {
-  try {
-    await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Master-Key": MASTER_KEY
-      },
-      body: JSON.stringify({
-        incidents,
-        units,
-        chat: chatLog,
-        lastUpdate: Date.now()
-      })
-    });
-  } catch (e) {}
+  await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Master-Key": MASTER_KEY
+    },
+    body: JSON.stringify({ incidents, history, units, chat: chatLog })
+  });
 }
 
-// ================== ADMIN ==================
+// LOGIN
 function adminLogin() {
-  const pass = document.getElementById("adminPass").value;
-
-  if (pass === ADMIN_PASSWORD) {
-    isAdmin = true;
+  if (document.getElementById("adminPass").value === ADMIN_PASSWORD) {
+    currentUser.role = "dispatch";
     document.getElementById("adminBox").style.display = "none";
     document.getElementById("dispatchControls").style.display = "block";
-  } else {
-    alert("Wrong password");
   }
 }
 
 function logoutAdmin() {
-  isAdmin = false;
-  document.getElementById("adminBox").style.display = "block";
-  document.getElementById("dispatchControls").style.display = "none";
+  currentUser.role = "viewer";
 }
 
-// ================== NEW CALL ==================
+// CALL CREATE
 async function newCall() {
-  if (!isAdmin) return;
-
-  const type = document.getElementById("callType").value;
-  const address = document.getElementById("address").value;
-  const details = document.getElementById("details").value;
-
-  if (!address || !details) return;
+  if (currentUser.role !== "dispatch") return;
 
   incidents.unshift({
     id: Date.now(),
-    type,
-    address,
-    details,
+    type: callType.value,
+    address: address.value,
+    details: details.value,
     status: "PENDING",
-    created: Date.now(),
+    incidentStatus: "FOA",
     attachedUnits: []
   });
 
   await saveData();
-
-  document.getElementById("address").value = "";
-  document.getElementById("details").value = "";
 }
 
-// ================== STATUS ==================
+// STATUS (dispatch only)
 async function changeStatus(id, status) {
-  const call = incidents.find(i => i.id === id);
-  if (!call) return;
+  if (currentUser.role !== "dispatch") return;
 
-  call.status = status;
-  await saveData();
-}
+  let c = incidents.find(i => i.id === id);
+  if (!c) return;
 
-// ================== ATTACH ==================
-async function attachUnit(id, unitName) {
-  const call = incidents.find(c => c.id === id);
-  if (!call) return;
+  c.incidentStatus = status;
 
-  if (!call.attachedUnits.includes(unitName)) {
-    call.attachedUnits.push(unitName);
+  if (status === "Fire Out" || status === "Road Cleared") {
+    history.unshift(c);
+    incidents = incidents.filter(i => i.id !== id);
   }
 
-  if (call.status === "PENDING") call.status = "ENROUTE";
-
   await saveData();
 }
 
-// ================== LEAVE ==================
-async function leaveUnit(id, unitName) {
-  const call = incidents.find(c => c.id === id);
-  if (!call) return;
-
-  call.attachedUnits = call.attachedUnits.filter(u => u !== unitName);
-
-  await saveData();
-}
-
-// ================== UI CALLS ==================
+// UI CALLS
 function updateUI() {
-  const container = document.getElementById("activeIncidents");
-  container.innerHTML = "";
+  const box = document.getElementById("activeIncidents");
+  box.innerHTML = "";
 
-  incidents.forEach(call => {
+  incidents.forEach(c => {
+    box.innerHTML += `
+      <div class="call-card">
+        <b>${c.type}</b><br>
+        ${c.address}<br>
+        ${c.incidentStatus}<br>
 
-    let color = "#ef4444";
-    if (call.status === "ENROUTE") color = "orange";
-    if (call.status === "ON SCENE") color = "yellow";
-    if (call.status === "CLEARED") color = "green";
-
-    container.innerHTML += `
-      <div class="call-card" style="border-left:5px solid ${color}">
-        <b>${call.type}</b><br>
-        ${call.address}<br>
-        <small>${call.details}</small><br><br>
-
-        <b>Status:</b> ${call.status}<br>
-        <b>Units:</b> ${call.attachedUnits.join(", ") || "None"}<br><br>
-
-        <button onclick="changeStatus(${call.id},'ENROUTE')">ENROUTE</button>
-        <button onclick="changeStatus(${call.id},'ON SCENE')">ON SCENE</button>
-        <button onclick="changeStatus(${call.id},'CLEARED')">CLEARED</button>
-
-        <button onclick="attachUnit(${call.id},'RESCUE 1')">ATTACH</button>
-        <button onclick="leaveUnit(${call.id},'RESCUE 1')">LEAVE</button>
+        ${currentUser.role === "dispatch" ? `
+          <button onclick="changeStatus(${c.id},'Fire Out')">Fire Out</button>
+          <button onclick="changeStatus(${c.id},'Under Control')">Under Control</button>
+          <button onclick="changeStatus(${c.id},'1st Alarm')">1st Alarm</button>
+        ` : ""}
       </div>
     `;
   });
 }
 
-// ================== UNITS ==================
-function updateUnitsUI() {
-  const container = document.getElementById("unitsList");
-  if (!container) return;
-
-  container.innerHTML = units.map(u => `
-    <div class="call-card">
-      <b>${u.name}</b><br>
-      Status: ${u.status}<br>
-
-      <select onchange="setUnitStatus('${u.name}', this.value)">
-        <option value="available">available</option>
-        <option value="enroute">enroute</option>
-        <option value="on scene">on scene</option>
-        <option value="returning">returning</option>
-        <option value="out of service">out of service</option>
-      </select>
+// HISTORY
+function updateHistory() {
+  const box = document.getElementById("historyList");
+  box.innerHTML = history.map(h => `
+    <div class="call-card" style="border-left:5px solid gray">
+      <b>${h.type}</b><br>
+      ${h.address}<br>
+      ${h.incidentStatus}
     </div>
   `).join("");
 }
 
-async function setUnitStatus(name, status) {
-  const unit = units.find(u => u.name === name);
-  if (!unit) return;
-
-  unit.status = status;
-  await saveData();
-}
-
-// ================== CHAT ==================
+// CHAT
 function sendMessage() {
-  const msg = document.getElementById("chatInput").value;
-  const name = document.getElementById("chatName").value || "UNIT";
-
-  if (!msg) return;
-
   chatLog.push({
-    name,
-    msg,
+    name: document.getElementById("chatName").value || "UNIT",
+    msg: chatInput.value,
     time: new Date().toLocaleTimeString()
   });
 
-  document.getElementById("chatInput").value = "";
-
+  chatInput.value = "";
   saveData();
-  updateChatUI();
 }
 
-function updateChatUI() {
-  const box = document.getElementById("chatMessages");
-  if (!box) return;
+// MOBILE VIEW SWITCH
+function setView(view) {
 
-  box.innerHTML = chatLog.map(c => `
-    [${c.time}] <b>${c.name}:</b> ${c.msg}
-  `).join("");
+  document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
 
-  box.scrollTop = box.scrollHeight;
+  if (view === "calls") callsPage.classList.add("active");
+  if (view === "units") unitsPage.classList.add("active");
+  if (view === "chat") chatPage.classList.add("active");
+  if (view === "history") historyPage.classList.add("active");
 }
 
-// ================== NAV ==================
-function showCalls() {
-  document.getElementById("callsPage").style.display = "block";
-  document.getElementById("unitsPage").style.display = "none";
-  document.getElementById("chatPage").style.display = "none";
-}
-
-function showUnits() {
-  document.getElementById("callsPage").style.display = "none";
-  document.getElementById("unitsPage").style.display = "block";
-  document.getElementById("chatPage").style.display = "none";
-}
-
-function showChat() {
-  document.getElementById("callsPage").style.display = "none";
-  document.getElementById("unitsPage").style.display = "none";
-  document.getElementById("chatPage").style.display = "block";
-}
+// INIT
+window.onload = () => {
+  initMap();
+  fetchData();
+  setView("calls");
+};
