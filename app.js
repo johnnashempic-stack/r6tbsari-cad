@@ -1,84 +1,156 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RESCUE CAD • ILOILO</title>
+const BIN_ID = "6a36000ef5f4af5e29128246";
+const API_KEY = "YOUR_KEY";
+const URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+let role = null;
+let calls = [];
+let presence = {};
+let map;
 
-<style>
-body{
-    margin:0;
-    font-family:monospace;
-    background:#000;
-    color:#00ff66;
+/* BOOT */
+function adminLogin(){
+    const pass = prompt("Dispatch Code:");
+
+    if(pass === "IR6TBSARI"){
+        role = "dispatcher";
+        startSystem();
+        document.getElementById("toolbar").style.display = "block";
+    } else {
+        alert("DENIED");
+    }
 }
 
-#startScreen{
-    position:fixed;
-    inset:0;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    background:#000;
+function unitLogin(){
+    const unit = prompt("Enter Unit (RESCUE 1-5):");
+    if(!unit) return;
+
+    role = "field";
+
+    if(!presence.activeUnits) presence.activeUnits = {};
+    presence.activeUnits[unit] = true;
+
+    startSystem();
 }
 
-.box{
-    background:#111;
-    border:3px solid #ffaa00;
-    padding:30px;
-    text-align:center;
+/* START SYSTEM */
+function startSystem(){
+    document.getElementById("startScreen").style.display = "none";
+    document.getElementById("main").style.display = "block";
+
+    initMap();
+    loadData();
+
+    setInterval(loadData, 3000);
 }
 
-button{
-    padding:10px;
-    margin:10px;
-    width:200px;
-    background:#003300;
-    color:#00ff66;
-    border:2px solid #00aa00;
-    cursor:pointer;
+/* MAP INIT (FIXED SIZE ISSUE) */
+function initMap(){
+    setTimeout(() => {
+        map = L.map("map").setView([10.7202,122.5621],13);
+
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+            attribution:"© OpenStreetMap"
+        }).addTo(map);
+
+        map.invalidateSize();
+    }, 200);
 }
 
-#main{
-    display:none;
+/* LOAD */
+async function loadData(){
+    try{
+        const res = await fetch(URL,{
+            headers:{ "X-Master-Key":API_KEY }
+        });
+
+        const data = await res.json();
+
+        calls = data.record.calls || [];
+        presence = data.record.presence || { activeUnits:{} };
+
+        render();
+    } catch(e){
+        console.log("LOAD ERROR", e);
+    }
 }
 
-.toolbar{
-    display:none;
-    background:#111;
-    padding:6px;
-    border-bottom:2px solid #ffaa00;
+/* SAVE */
+async function saveData(){
+    await fetch(URL,{
+        method:"PUT",
+        headers:{
+            "Content-Type":"application/json",
+            "X-Master-Key":API_KEY
+        },
+        body: JSON.stringify({
+            calls,
+            presence
+        })
+    });
 }
-</style>
-</head>
 
-<body>
+/* CREATE CALL */
+function createCall(){
+    if(role !== "dispatcher"){
+        alert("DISPATCH ONLY");
+        return;
+    }
 
-<!-- START SCREEN -->
-<div id="startScreen">
-<div class="box">
-<h2>RESCUE CAD SYSTEM</h2>
+    const type = prompt("CALL TYPE:");
+    const loc = prompt("LOCATION:");
 
-<button onclick="adminLogin()">DISPATCH LOGIN</button>
-<button onclick="unitLogin()">UNIT LOGIN</button>
-</div>
-</div>
+    if(!type || !loc) return;
 
-<!-- MAIN -->
-<div id="main">
+    calls.unshift({
+        id: Date.now(),
+        type,
+        location: loc,
+        status: "DISPATCHED",
+        assignedUnit: null
+    });
 
-<div class="toolbar" id="toolbar">
-<button onclick="createCall()">NEW CALL</button>
-</div>
+    saveData();
+    render();
+}
 
-<div id="map" style="height:80vh;"></div>
+/* RESPOND */
+function respond(id){
+    let c = calls.find(x => x.id === id);
+    if(!c) return;
 
-</div>
+    c.assignedUnit = "FIELD UNIT";
+    c.status = "RESPONDING";
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="app.js"></script>
+    saveData();
+    render();
+}
 
-</body>
-</html>
+/* RENDER (NOW WORKING) */
+function render(){
+    const panel = document.getElementById("panel");
+
+    panel.innerHTML = "<h3>ACTIVE CALLS</h3>";
+
+    if(calls.length === 0){
+        panel.innerHTML += "<p>No active calls</p>";
+        return;
+    }
+
+    calls.forEach(c => {
+        const div = document.createElement("div");
+        div.style.border = "1px solid #ffaa00";
+        div.style.margin = "10px";
+        div.style.padding = "10px";
+        div.style.background = "#1a1a1a";
+
+        div.innerHTML = `
+        <b>${c.type}</b><br>
+        📍 ${c.location}<br>
+        STATUS: ${c.status}<br><br>
+
+        <button onclick="respond(${c.id})">RESPOND</button>
+        `;
+
+        panel.appendChild(div);
+    });
+}
