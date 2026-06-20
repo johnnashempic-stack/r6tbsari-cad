@@ -1,186 +1,193 @@
+const BIN_ID = "YOUR_BIN_ID";
+const KEY = "YOUR_KEY";
 const ADMIN_PASS = "IR6TB-018";
 
 let role = "responder";
 
 let calls = [];
-let history = [];
 let chat = [];
+let units = [];
+let history = [];
 
-let units = [
-  {id:1,name:"RESCUE 1",status:"AVAILABLE",takenBy:null},
-  {id:2,name:"RESCUE 2",status:"AVAILABLE",takenBy:null}
-];
+let lastCall = null;
+let map;
+let markers = {};
 
-function isDispatch(){
-  return role === "dispatch";
+let currentUser = {
+  id: "u"+Math.random().toString(16).slice(2),
+  name:"Responder",
+  role:"responder"
+};
+
+/* ---------------- SYNC ---------------- */
+async function sync(){
+
+  let r = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`,{
+    headers:{ "X-Master-Key":KEY }
+  });
+
+  if(!r.ok) return;
+
+  let d = await r.json();
+  let data = d.record;
+
+  calls = data.calls || [];
+  chat = data.chat || [];
+  units = data.units || [];
+
+  if(lastCall !== calls[0]?.id){
+    lastCall = calls[0]?.id;
+    document.getElementById("alarm").play();
+  }
+
+  renderCalls();
+  renderChat();
+  renderUnits();
+  updateMap();
 }
 
-/* LOGIN */
+setInterval(sync,3000);
+
+/* ---------------- SAVE ---------------- */
+function save(){
+
+  fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`,{
+    method:"PUT",
+    headers:{
+      "Content-Type":"application/json",
+      "X-Master-Key":KEY
+    },
+    body: JSON.stringify({calls,chat,units,history})
+  });
+}
+
+/* ---------------- LOGIN ---------------- */
 function login(){
   if(pass.value === ADMIN_PASS){
     role = "dispatch";
-    dispatchUI.style.display = "block";
+    dispatchUI.style.display="block";
   }
 }
 
-function logout(){
-  role = "responder";
-  dispatchUI.style.display = "none";
-}
-
-/* CALL SYSTEM */
-const STATUS = {
-  "🔥 Fire":["FOA","1st Alarm","Under Control","Fire Out"],
-  "🚑 Medical":["Stable","Critical","Transporting"],
-  "🛟 Rescue":["Search","Complete"],
-  "🚗 MVA":["Minor","Road Cleared"]
-};
-
-const END = {
-  "🔥 Fire":["Fire Out"],
-  "🚑 Medical":["Transporting"],
-  "🛟 Rescue":["Complete"],
-  "🚗 MVA":["Road Cleared"]
-};
-
+/* ---------------- CALL ---------------- */
 function createCall(){
-  if(!isDispatch()) return;
 
-  calls.unshift({
+  if(role!=="dispatch") return;
+
+  let c = {
     id:Date.now(),
     type:type.value,
     address:address.value,
     details:details.value,
     status:"ACTIVE"
+  };
+
+  calls.unshift(c);
+
+  chat.unshift({
+    user:"SYSTEM",
+    role:"system",
+    msg:`NEW INCIDENT: ${c.type} | ${c.address}`
   });
 
-  renderCalls();
+  save();
 }
 
-/* STATUS */
-function setStatus(id,status){
+/* ---------------- CHAT ---------------- */
+function send(msg){
 
-  if(!isDispatch()) return;
+  chat.unshift({
+    user:currentUser.name,
+    role:role,
+    msg
+  });
 
-  let c = calls.find(x=>x.id===id);
-  if(!c) return;
-
-  c.status = status;
-
-  if(END[c.type]?.includes(status)){
-    history.unshift(c);
-    calls = calls.filter(x=>x.id!==id);
-  }
-
-  renderCalls();
+  save();
 }
 
-/* REMOVE */
-function removeCall(id){
-  if(!isDispatch()) return;
+function renderChat(){
 
-  let c = calls.find(x=>x.id===id);
-  if(!c) return;
+  chatPanel.innerHTML="";
 
-  history.unshift({...c,status:"REMOVED"});
-  calls = calls.filter(x=>x.id!==id);
-
-  renderCalls();
+  chat.forEach(m=>{
+    chatPanel.innerHTML += `<div class="card">
+      <b>${m.user}</b> (${m.role})<br>${m.msg}
+    </div>`;
+  });
 }
 
-/* RENDER CALLS */
+/* ---------------- CALLS ---------------- */
 function renderCalls(){
 
-  const box = callsPanel;
-  box.innerHTML = "";
+  callsPanel.innerHTML="";
 
   calls.forEach(c=>{
-
-    let btn = "";
-
-    if(isDispatch()){
-      btn = (STATUS[c.type]||[])
-        .map(s=>`<button onclick="setStatus(${c.id},'${s}')">${s}</button>`)
-        .join("")
-        + `<button onclick="removeCall(${c.id})">REMOVE</button>`;
-    }
-
-    box.innerHTML += `
-      <div class="card">
-        <b>${c.type}</b><br>
-        ${c.address}<br>
-        ${c.status}<br><br>
-        ${btn}
-      </div>
-    `;
+    callsPanel.innerHTML += `<div class="card">
+      <b>${c.type}</b><br>
+      ${c.address}<br>
+      ${c.status}
+    </div>`;
   });
 }
 
-/* UNITS */
-const UNIT_STATUS = ["AVAILABLE","ENROUTE","ON SCENE","RETURNING","OOS"];
-
+/* ---------------- UNITS ---------------- */
 function selectUnit(id){
-
-  if(role !== "responder") return;
 
   let u = units.find(x=>x.id===id);
   if(!u) return;
 
-  if(u.takenBy && u.takenBy !== "YOU") return;
+  if(u.takenBy && u.takenBy!==currentUser.id) return;
 
   units.forEach(x=>{
-    if(x.takenBy==="YOU") x.takenBy=null;
+    if(x.takenBy===currentUser.id) x.takenBy=null;
   });
 
-  u.takenBy="YOU";
-}
-
-function changeUnitStatus(id,status){
-
-  if(role !== "responder") return;
-
-  let u = units.find(x=>x.id===id);
-  if(!u || u.takenBy!=="YOU") return;
-
-  u.status = status;
+  u.takenBy=currentUser.id;
+  save();
 }
 
 function renderUnits(){
 
-  const box = unitsPanel;
-  box.innerHTML = "";
+  unitsPanel.innerHTML="";
 
   units.forEach(u=>{
 
-    let btn = "";
+    if(u.takenBy && u.takenBy!==currentUser.id) return;
 
-    if(!u.takenBy && role==="responder"){
-      btn += `<button onclick="selectUnit(${u.id})">TAKE UNIT</button>`;
+    let btn="";
+
+    if(!u.takenBy){
+      btn=`<button onclick="selectUnit(${u.id})">TAKE</button>`;
     }
 
-    if(u.takenBy==="YOU"){
-      btn += UNIT_STATUS.map(s=>
-        `<button onclick="changeUnitStatus(${u.id},'${s}')">${s}</button>`
-      ).join("");
-    }
-
-    box.innerHTML += `
-      <div class="card">
-        <b>${u.name}</b><br>
-        ${u.status}<br>
-        ${btn}
-      </div>
-    `;
+    unitsPanel.innerHTML += `<div class="card">
+      <b>${u.name}</b><br>${u.status}<br>${btn}
+    </div>`;
   });
 }
 
-/* CHAT */
-function renderChat(){
-  const box = chatPanel;
-  box.innerHTML = chat.map(m=>`<div>${m.msg}</div>`).join("");
+/* ---------------- MAP ---------------- */
+function initMap(){
+  map = L.map('map').setView([10.72,122.55],13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 }
 
-/* VIEW SWITCH */
+function updateMap(){
+
+  units.forEach(u=>{
+
+    if(!u.lat){ u.lat=10.72; u.lng=122.55; }
+
+    if(!markers[u.id]){
+      markers[u.id]=L.marker([u.lat,u.lng]).addTo(map);
+    }else{
+      markers[u.id].setLatLng([u.lat,u.lng]);
+    }
+
+  });
+}
+
+/* ---------------- VIEW ---------------- */
 function view(v){
 
   callsPanel.style.display="none";
@@ -192,10 +199,9 @@ function view(v){
   if(v==="chat") chatPanel.style.display="block";
 }
 
-/* INIT */
-window.onload = ()=>{
+/* ---------------- INIT ---------------- */
+window.onload=()=>{
   view("calls");
-  renderCalls();
-  renderUnits();
-  renderChat();
+  initMap();
+  sync();
 };
