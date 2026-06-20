@@ -3,8 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>FIRE MDT CAD</title>
+<title>MOBILE DATA TERMINAL</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
@@ -13,7 +12,7 @@ body {
   margin:0;
   font-family:Arial;
   background:#0b0c10;
-  color:#e5e5e5;
+  color:#fff;
   display:flex;
   height:100vh;
 }
@@ -73,6 +72,11 @@ button{
   background:#e63946;
   cursor:pointer;
 }
+
+#map {
+  height:200px;
+  margin-top:10px;
+}
 </style>
 </head>
 
@@ -93,35 +97,34 @@ button{
 
 <div class="right">
 
-  <h3>DISPATCH</h3>
-
+  <h3>DISPATCH LOGIN</h3>
   <input type="password" id="pass">
   <button onclick="login()">LOGIN</button>
 
   <div id="dispatchUI" style="display:none">
 
+    <h3>NEW CALL</h3>
+
     <select id="type">
       <option>🔥 Fire</option>
       <option>🚑 Medical</option>
       <option>🛟 Rescue</option>
-      <option>🚗 MVA</option>
+      <option>🚗 VA</option>
     </select>
 
-    <input id="address">
-    <textarea id="details"></textarea>
+    <input id="address" placeholder="Address">
+    <textarea id="details" placeholder="Details"></textarea>
 
     <button onclick="createCall()">DISPATCH CALL</button>
-    <button onclick="logout()">LOGOUT</button>
 
   </div>
 
+  <div id="map"></div>
 </div>
 
 <audio id="alarm">
 <source src="https://freesound.org/data/previews/522/522459_11552799-lq.mp3">
 </audio>
-
-<div id="map" style="height:0"></div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="app.js"></script>
