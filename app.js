@@ -6,13 +6,11 @@ let role = "responder";
 
 let calls = [];
 let chat = [];
-let units = [
-  {id:1,name:"RESCUE 1",status:"AVAILABLE",takenBy:null,lat:10.72,lng:122.55},
-  {id:2,name:"RESCUE 2",status:"AVAILABLE",takenBy:null,lat:10.73,lng:122.56},
-  {id:3,name:"RESCUE 3",status:"AVAILABLE",takenBy:null,lat:10.74,lng:122.57}
-];
+let units = [];
+let history = [];
 
-let lastCall = null;
+let lastCallId = null;
+
 let map;
 let markers = {};
 
@@ -40,10 +38,12 @@ async function sync(){
 
     calls = r.calls || [];
     chat = r.chat || [];
-    units = r.units || units;
+    units = r.units || [];
 
-    if(calls[0]?.id !== lastCall){
-      lastCall = calls[0]?.id;
+    if(calls.length && calls[0].id !== lastCallId){
+
+      lastCallId = calls[0].id;
+
       document.getElementById("alarm")?.play();
 
       chat.unshift({
@@ -51,12 +51,14 @@ async function sync(){
         role:"system",
         msg:`NEW INCIDENT: ${calls[0].type} | ${calls[0].address}`
       });
+
+      save();
     }
 
-    renderAll();
+    render();
 
   }catch(e){
-    console.log("sync error");
+    console.log("SYNC ERROR");
   }
 }
 
@@ -70,20 +72,21 @@ function save(){
       "Content-Type":"application/json",
       "X-Master-Key":KEY
     },
-    body:JSON.stringify({calls,chat,units})
+    body:JSON.stringify({calls,chat,units,history})
   });
 }
 
 /* CALL */
 function createCall(){
 
-  if(role!=="dispatch") return;
+  if(role !== "dispatch") return;
 
   const c = {
-    id:Date.now(),
-    type:type.value,
-    address:address.value,
-    details:details.value
+    id: Date.now(),
+    type: type.value,
+    address: address.value,
+    details: details.value,
+    status: "ACTIVE"
   };
 
   calls.unshift(c);
@@ -109,10 +112,10 @@ function selectUnit(id){
   let u = units.find(x=>x.id===id);
   if(!u) return;
 
-  if(u.takenBy && u.takenBy!==role) return;
+  if(u.takenBy && u.takenBy !== role) return;
 
   units.forEach(x=>{
-    if(x.takenBy===role) x.takenBy=null;
+    if(x.takenBy === role) x.takenBy = null;
   });
 
   u.takenBy = role;
@@ -120,8 +123,8 @@ function selectUnit(id){
   save();
 }
 
-/* RENDER ALL */
-function renderAll(){
+/* RENDER */
+function render(){
   renderCalls();
   renderChat();
   renderUnits();
@@ -130,42 +133,24 @@ function renderAll(){
 
 /* CALLS */
 function renderCalls(){
-
-  callsPanel.innerHTML="";
-
+  callsPanel.innerHTML = "";
   calls.forEach(c=>{
-    callsPanel.innerHTML += `
-      <div class="card">
-        <b>${c.type}</b><br>
-        ${c.address}
-      </div>
-    `;
+    callsPanel.innerHTML += `<div class="card"><b>${c.type}</b><br>${c.address}</div>`;
   });
 }
 
 /* CHAT */
 function renderChat(){
-
-  chatPanel.innerHTML="";
-
+  chatPanel.innerHTML = "";
   chat.forEach(m=>{
-    chatPanel.innerHTML += `
-      <div class="card">
-        <b>${m.user}</b><br>${m.msg}
-      </div>
-    `;
+    chatPanel.innerHTML += `<div class="card"><b>${m.user}</b><br>${m.msg}</div>`;
   });
 }
 
 /* UNITS */
 function renderUnits(){
-
-  unitsPanel.innerHTML="";
-
+  unitsPanel.innerHTML = "";
   units.forEach(u=>{
-
-    if(u.takenBy && u.takenBy!==role) return;
-
     unitsPanel.innerHTML += `
       <div class="card">
         <b>${u.name}</b><br>
@@ -187,8 +172,8 @@ function updateMap(){
   units.forEach(u=>{
 
     if(!markers[u.id]){
-      markers[u.id]=L.marker([u.lat,u.lng]).addTo(map);
-    }else{
+      markers[u.id] = L.marker([u.lat,u.lng]).addTo(map);
+    } else {
       markers[u.id].setLatLng([u.lat,u.lng]);
     }
 
