@@ -1,5 +1,5 @@
 const BIN_ID = "6a36000ef5f4af5e29128246";
-const API_KEY = "YOUR_KEY";
+const API_KEY = "$2a$10$xqh.MDd939MiRTFQpJ4GJebf7kSrK5dnmT/a8E0DG9bFNqdLW5vzS";
 const URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
 let role = null;
