@@ -1,100 +1,161 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RESCUE CAD • ILOILO</title>
-
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-
-<style>
-body{
-    margin:0;
-    font-family:monospace;
-    background:#000;
-    color:#00ff66;
-}
-
-#startScreen{
-    position:fixed;
-    inset:0;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    background:#000;
-    z-index:9999;
-}
-
-.box{
-    background:#111;
-    border:3px solid #ffaa00;
-    padding:30px;
-    text-align:center;
-}
-
-button{
-    padding:12px;
-    margin:10px;
-    width:220px;
-    background:#003300;
-    color:#00ff66;
-    border:2px solid #00aa00;
-    cursor:pointer;
-    font-weight:bold;
-}
-
-#main{
-    display:none;
-    height:100vh;
-}
-
-#toolbar{
-    display:none;
-    background:#111;
-    padding:8px;
-    border-bottom:2px solid #ffaa00;
-}
-
-#map{
-    height:60vh;
-    width:100%;
-}
-
-#panel{
-    height:40vh;
-    overflow:auto;
-    background:#111;
-    padding:10px;
-    border-top:2px solid #333;
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FD MDT - Fire Rescue SAR</title>
+    <style>
+        body { 
+            font-family: 'Courier New', monospace; 
+            background: #0a0a0a; 
+            color: #ffcc80; 
+            margin: 0; 
+            padding: 0; 
+            overflow: hidden; 
+        }
+        .container { 
+            max-width: 1000px; 
+            margin: 0 auto; 
+            border: 3px solid #ff8800; 
+            background: #111; 
+            height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+        }
+        header { 
+            background: #1a0f00; 
+            padding: 12px; 
+            text-align: center; 
+            border-bottom: 3px solid #ff8800; 
+        }
+        .login { 
+            position: absolute; 
+            top: 50%; 
+            left: 50%; 
+            transform: translate(-50%, -50%); 
+            background: #000; 
+            padding: 30px; 
+            border: 3px solid #ff8800; 
+            text-align: center; 
+            box-shadow: 0 0 20px rgba(255, 136, 0, 0.5);
+        }
+        input, button, select { 
+            background: #1a0f00; 
+            color: #ffcc80; 
+            border: 2px solid #ff8800; 
+            padding: 10px; 
+            margin: 6px; 
+            font-family: inherit; 
+            font-weight: bold;
+        }
+        button { 
+            cursor: pointer; 
+            transition: all 0.2s;
+        }
+        button:hover { 
+            background: #ff8800; 
+            color: #000; 
+        }
+        .tabs { 
+            display: flex; 
+            background: #1a0f00; 
+            border-bottom: 2px solid #ff8800;
+        }
+        .tab { 
+            padding: 12px 20px; 
+            cursor: pointer; 
+            border-bottom: 4px solid transparent; 
+            color: #ffcc80;
+        }
+        .tab.active { 
+            border-bottom: 4px solid #ff8800; 
+            background: #331a00; 
+            color: #fff;
+        }
+        .panel { 
+            padding: 15px; 
+            flex: 1; 
+            overflow-y: auto; 
+            display: none; 
+        }
+        .panel.active { display: block; }
+        .log { 
+            background: #000; 
+            padding: 12px; 
+            height: 220px; 
+            overflow-y: auto; 
+            border: 2px solid #ff8800; 
+            font-size: 0.9em; 
+            color: #ffcc80;
+        }
+        .unit { 
+            background: #331a00; 
+            margin: 8px 0; 
+            padding: 10px; 
+            border: 2px solid #ff8800; 
+        }
+        .call { 
+            background: #2a0a00; 
+            margin: 10px 0; 
+            padding: 12px; 
+            border: 2px solid #ff4400; 
+        }
+        .status-enroute { color: #ffaa00; font-weight: bold; }
+        .status-arrived { color: #ffdd00; font-weight: bold; }
+        .status-cleared { color: #88ff88; }
+    </style>
 </head>
-
 <body>
+<div class="container">
+    <header>
+        <h1 style="color:#ff8800; margin:0;">FD MDT - FIRE / RESCUE SAR</h1>
+        <div id="user-info" style="display:none; color:#ffcc80;">
+            Logged in as: <span id="username" style="color:#fff"></span> | Role: <span id="role" style="color:#fff"></span>
+        </div>
+    </header>
 
-<div id="startScreen">
-<div class="box">
-<h2>RESCUE CAD SYSTEM</h2>
+    <!-- Login -->
+    <div id="login-screen" class="login">
+        <h2 style="color:#ff8800;">FD MDT Login</h2>
+        <input type="text" id="login-user" placeholder="Username" value="Dispatch1"><br>
+        <select id="login-role">
+            <option value="Responder">Responder</option>
+            <option value="Dispatch" selected>Dispatch</option>
+        </select><br>
+        <button onclick="login()">LOG IN</button>
+    </div>
 
-<button onclick="adminLogin()">DISPATCH LOGIN</button>
-<button onclick="unitLogin()">UNIT LOGIN</button>
+    <!-- Main Interface -->
+    <div id="main-ui" style="display:none; flex:1; flex-direction:column;">
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab(0)">Active Calls</div>
+            <div class="tab" onclick="switchTab(1)">Units</div>
+            <div class="tab" onclick="switchTab(2)">Dispatch Log</div>
+            <button onclick="logout()" style="margin-left:auto; background:#440000; border:2px solid #ff4400;">LOGOUT</button>
+        </div>
 
+        <!-- Active Calls Tab -->
+        <div id="tab0" class="panel active">
+            <h2 style="color:#ff8800;">Active Calls 
+                <button onclick="createCall()" style="background:#ff8800; color:#000;">+ Create New Call</button>
+            </h2>
+            <div id="calls-list"></div>
+        </div>
+
+        <!-- Units Tab -->
+        <div id="tab1" class="panel">
+            <h2 style="color:#ff8800;">Rescue Units (All SAR Capable)</h2>
+            <div id="units-list"></div>
+        </div>
+
+        <!-- Dispatch Log Tab -->
+        <div id="tab2" class="panel">
+            <h2 style="color:#ff8800;">Dispatch Log</h2>
+            <div id="dispatch-log" class="log"></div>
+        </div>
+    </div>
 </div>
-</div>
 
-<div id="main">
-
-<div id="toolbar">
-<button onclick="createCall()">NEW CALL</button>
-</div>
-
-<div id="map"></div>
-<div id="panel"></div>
-
-</div>
-
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="app.js"></script>
-
 </body>
 </html>
