@@ -22,6 +22,7 @@ body{
     justify-content:center;
     align-items:center;
     background:#000;
+    z-index:9999;
 }
 
 .box{
@@ -32,48 +33,64 @@ body{
 }
 
 button{
-    padding:10px;
+    padding:12px;
     margin:10px;
-    width:200px;
+    width:220px;
     background:#003300;
     color:#00ff66;
     border:2px solid #00aa00;
     cursor:pointer;
+    font-weight:bold;
 }
 
 #main{
     display:none;
+    height:100vh;
 }
 
-.toolbar{
+#toolbar{
     display:none;
     background:#111;
-    padding:6px;
+    padding:8px;
     border-bottom:2px solid #ffaa00;
+}
+
+#map{
+    height:60vh;
+}
+
+#panel{
+    height:40vh;
+    overflow:auto;
+    background:#111;
+    padding:10px;
+    border-top:2px solid #333;
 }
 </style>
 </head>
 
 <body>
 
-<!-- START SCREEN -->
+<!-- START -->
 <div id="startScreen">
 <div class="box">
-<h2>RESCUE CAD SYSTEM</h2>
+<h2>RESCUE CAD</h2>
 
 <button onclick="adminLogin()">DISPATCH LOGIN</button>
 <button onclick="unitLogin()">UNIT LOGIN</button>
+
 </div>
 </div>
 
 <!-- MAIN -->
 <div id="main">
 
-<div class="toolbar" id="toolbar">
+<div id="toolbar">
 <button onclick="createCall()">NEW CALL</button>
 </div>
 
-<div id="map" style="height:80vh;"></div>
+<div id="map"></div>
+<div id="panel"></div>
 
 </div>
 
