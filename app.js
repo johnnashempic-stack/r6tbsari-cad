@@ -1,32 +1,26 @@
 let map;
-let currentRole = "field";
+let role = "field";
 let selectedUnit = null;
-
-let incidents = [
-    { id:1, type:"FIRE", location:"123 MAIN ST", status:"DISPATCHED", units:[], priority:"high" },
-    { id:2, type:"MEDICAL", location:"456 OAK AVE", status:"ON SCENE", units:["A3"], priority:"medium" }
-];
-
-let units = [
-    { name:"E1", status:"AVAILABLE" },
-    { name:"L2", status:"AVAILABLE" },
-    { name:"A3", status:"AVAILABLE" }
-];
+let calls = []; // CLEAN START
 
 // ================= LOG =================
 function log(msg){
     const el=document.getElementById("log");
     const t=new Date().toLocaleTimeString();
-    el.innerHTML+=`[${t}] ${msg}<br>`;
-    el.scrollTop=el.scrollHeight;
+    el.innerHTML += `[${t}] ${msg}<br>`;
+    el.scrollTop = el.scrollHeight;
 }
 
-// ================= MAP =================
+// ================= MAP (ILOILO BASE) =================
 function initMap(){
-    map=L.map("map").setView([45.78,-108.50],14);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+    map = L.map("map").setView([10.7202, 122.5621], 13);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution:"© OpenStreetMap"
+    }).addTo(map);
+
     render();
-    log("CAD SYSTEM ONLINE");
+    log("CAD ONLINE • ILOILO BASE ACTIVE");
 }
 
 // ================= RENDER =================
@@ -34,125 +28,129 @@ function render(){
     const side=document.getElementById("sidebar");
     side.innerHTML="<h3 style='color:#ffaa00'>ACTIVE CALLS</h3>";
 
-    incidents.forEach(i=>{
+    if(calls.length === 0){
+        side.innerHTML += "<p>No active incidents</p>";
+        return;
+    }
+
+    calls.forEach(c=>{
         const div=document.createElement("div");
-        div.className="incident-card"+(i.priority==="high"?" priority-high":"");
+        div.className="card"+(c.priority==="high"?" high":"");
 
         div.innerHTML=`
-        <b>#${i.id} ${i.type}</b><br>
-        ${i.location}<br>
-        STATUS: ${i.status}<br>
-        UNITS: ${i.units.join(", ")||"NONE"}<br><br>
+        <b>#${c.id} ${c.type}</b><br>
+        📍 ${c.location}<br>
+        STATUS: ${c.status}<br>
+        UNIT: ${c.unit || "UNASSIGNED"}<br><br>
 
-        <button onclick="setStatus(${i.id},'DISPATCHED')">DISPATCHED</button>
-        <button onclick="setStatus(${i.id},'EN ROUTE')">EN ROUTE</button>
-        <button onclick="setStatus(${i.id},'ON SCENE')">ON SCENE</button>
-        <button onclick="setStatus(${i.id},'CLOSED')">CLOSE</button>
-        <button onclick="assignUnit(${i.id})">ASSIGN UNIT</button>
+        <button onclick="setStatus(${c.id},'DISPATCHED')">DISPATCHED</button>
+        <button onclick="setStatus(${c.id},'EN ROUTE')">EN ROUTE</button>
+        <button onclick="setStatus(${c.id},'ON SCENE')">ON SCENE</button>
+        <button onclick="closeCall(${c.id})">CLOSE</button>
         `;
 
         side.appendChild(div);
     });
 }
 
-// ================= INCIDENT CREATION =================
-function createIncident(){
-    const type=prompt("Type:");
-    const location=prompt("Location:");
-    const priority=prompt("Priority (high/medium/low):");
-
-    if(!type||!location)return;
-
-    const inc={
-        id:incidents.length+1,
-        type,
-        location,
-        status:"DISPATCHED",
-        units:[],
-        priority:priority||"medium"
-    };
-
-    incidents.unshift(inc);
-    render();
-    log(`NEW CALL CREATED: #${inc.id} ${type}`);
-}
-
-// ================= STATUS =================
-function setStatus(id,status){
-    const i=incidents.find(x=>x.id===id);
-    if(!i)return;
-    i.status=status;
-    render();
-    log(`CALL #${id} STATUS: ${status}`);
-}
-
-// ================= UNIT ASSIGN =================
-function assignUnit(id){
-    const unit=prompt("Assign Unit (E1, L2, A3):");
-    const i=incidents.find(x=>x.id===id);
-    if(!i||!unit)return;
-
-    i.units.push(unit);
-    render();
-    log(`UNIT ${unit} ASSIGNED TO CALL #${id}`);
-}
-
-// ================= FIELD MODE =================
-function enterFieldMode(){
-    const unit=prompt("Select Unit (E1/L2/A3):");
-    if(!unit){
-        alert("Unit required");
+// ================= CREATE CALL (DISPATCH ONLY) =================
+function createCall(){
+    if(role !== "dispatcher"){
+        alert("DISPATCH ACCESS ONLY");
         return;
     }
 
-    selectedUnit=unit;
-    document.getElementById("current-unit").textContent=unit;
-    log(`FIELD MODE ACTIVE: ${unit}`);
+    const type=prompt("CALL TYPE:");
+    const location=prompt("LOCATION (ILOILO):");
+    const priority=prompt("PRIORITY (high/medium/low):");
+
+    if(!type || !location) return;
+
+    calls.unshift({
+        id:calls.length+1,
+        type,
+        location,
+        priority:priority||"medium",
+        status:"DISPATCHED",
+        unit:null
+    });
+
+    render();
+    log(`NEW CALL CREATED: #${calls.length} ${type}`);
 }
 
-// ================= STATUS UPDATE =================
+// ================= STATUS CONTROL =================
+function setStatus(id,status){
+    const c=calls.find(x=>x.id===id);
+    if(!c) return;
+
+    c.status=status;
+    render();
+    log(`CALL #${id} → ${status}`);
+}
+
+// ================= CLOSE =================
+function closeCall(id){
+    calls=calls.filter(x=>x.id!==id);
+    render();
+    log(`CALL #${id} CLOSED`);
+}
+
+// ================= UNIT MENU =================
+function openUnitMenu(){
+    document.getElementById("unitScreen").style.display="flex";
+}
+
+function selectUnit(u){
+    selectedUnit=u;
+    document.getElementById("unitScreen").style.display="none";
+    document.getElementById("roleText").innerText=`FIELD UNIT • ${u}`;
+    log(`UNIT ASSIGNED: ${u}`);
+}
+
+// ================= FIELD STATUS =================
 function updateStatus(s){
     if(!selectedUnit){
         alert("Select unit first");
         return;
     }
 
-    document.getElementById("unit-status").textContent=s;
-    log(`UNIT ${selectedUnit}: ${s}`);
-}
-
-// ================= RADIO =================
-function sendMessage(){
-    const msg=prompt("RADIO:");
-    if(msg)log(`RADIO: ${msg}`);
+    log(`${selectedUnit} STATUS: ${s}`);
 }
 
 // ================= LOGIN =================
-function showLogin(){document.getElementById("login-screen").style.display="flex";}
-function cancelLogin(){document.getElementById("login-screen").style.display="none";}
+function openLogin(){
+    document.getElementById("loginModal").style.display="flex";
+}
 
-function attemptLogin(){
-    const u=document.getElementById("username").value;
-    const p=document.getElementById("password").value;
+function closeLogin(){
+    document.getElementById("loginModal").style.display="none";
+}
 
-    if(u==="admin"&&p==="dispatch123"){
-        currentRole="dispatcher";
-        document.getElementById("login-screen").style.display="none";
-        document.getElementById("login-btn").style.display="none";
-        document.getElementById("logout-btn").style.display="block";
-        document.getElementById("role-indicator").textContent="DISPATCH ACTIVE";
+function login(){
+    const u=document.getElementById("user").value;
+    const p=document.getElementById("pass").value;
+
+    if(u==="admin" && p==="dispatch123"){
+        role="dispatcher";
+        document.getElementById("loginModal").style.display="none";
+        document.getElementById("loginBtn").style.display="none";
+        document.getElementById("logoutBtn").style.display="block";
+        document.getElementById("roleText").innerText="DISPATCH ACTIVE";
         log("DISPATCH LOGIN SUCCESS");
-    } else alert("INVALID");
+    } else {
+        alert("INVALID");
+    }
 }
 
 function logout(){
-    currentRole="field";
+    role="field";
     selectedUnit=null;
-    document.getElementById("current-unit").textContent="NONE";
-    document.getElementById("login-btn").style.display="block";
-    document.getElementById("logout-btn").style.display="none";
-    document.getElementById("role-indicator").textContent="FIELD UNIT";
+    document.getElementById("loginBtn").style.display="block";
+    document.getElementById("logoutBtn").style.display="none";
+    document.getElementById("roleText").innerText="FIELD UNIT";
     log("LOGGED OUT");
 }
 
+// ================= INIT =================
 window.onload=initMap;
