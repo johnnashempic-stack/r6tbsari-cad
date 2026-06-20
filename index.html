@@ -3,7 +3,6 @@
 <head>
   <title>R6TBSARI FIRE MDT</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
   <style>
@@ -19,7 +18,6 @@
       overflow:hidden;
     }
 
-    /* SIDEBAR */
     .sidebar {
       width:200px;
       background:#111114;
@@ -44,12 +42,8 @@
       color:#aaa;
     }
 
-    .nav-item:hover {
-      background:#222;
-      color:white;
-    }
+    .nav-item:hover { background:#222; color:#fff; }
 
-    /* MAIN */
     .main {
       flex:1;
       display:flex;
@@ -64,14 +58,12 @@
       justify-content:space-between;
     }
 
-    /* DESKTOP GRID */
     .content {
       flex:1;
       display:grid;
       grid-template-columns: 2fr 2fr 1.2fr;
       gap:10px;
       padding:10px;
-      overflow:hidden;
     }
 
     .panel {
@@ -101,16 +93,8 @@
 
     button {
       background:#ef4444;
-      font-weight:bold;
       cursor:pointer;
-    }
-
-    #chatMessages {
-      height:70%;
-      overflow:auto;
-      background:#111;
-      padding:8px;
-      margin-bottom:10px;
+      font-weight:bold;
     }
 
     .dispatch {
@@ -120,13 +104,8 @@
       padding:10px;
     }
 
-    /* MOBILE ONLY */
-    @media (max-width: 768px) {
-
-      body {
-        flex-direction:column;
-        overflow:auto;
-      }
+    @media (max-width:768px) {
+      body { flex-direction:column; overflow:auto; }
 
       .sidebar {
         width:100%;
@@ -134,17 +113,11 @@
         justify-content:space-around;
       }
 
-      .content {
-        display:block;
-      }
+      .content { display:block; }
 
-      .panel {
-        display:none;
-      }
+      .panel { display:none; }
 
-      .panel.active {
-        display:block;
-      }
+      .panel.active { display:block; }
 
       .dispatch {
         width:100%;
@@ -152,37 +125,30 @@
         border-top:1px solid #333;
       }
 
-      #map {
-        height:250px !important;
-      }
+      #map { height:250px !important; }
     }
-
   </style>
 </head>
 
 <body>
 
-<!-- SIDEBAR -->
 <div class="sidebar">
   <div class="logo">FIRE MDT</div>
-
   <div class="nav-item" onclick="setView('calls')">CALLS</div>
   <div class="nav-item" onclick="setView('units')">UNITS</div>
   <div class="nav-item" onclick="setView('chat')">CHAT</div>
   <div class="nav-item" onclick="setView('history')">HISTORY</div>
 </div>
 
-<!-- MAIN -->
 <div class="main">
 
 <header>
-  <div>🚒 R6TBSARI FIRE MDT</div>
-  <div>LIVE CAD SYNC</div>
+  <div>🚒 FIRE MDT SYSTEM</div>
+  <div>LIVE SYNC</div>
 </header>
 
 <div class="content">
 
-  <!-- CALLS -->
   <div class="panel active" id="callsPage">
     <h3>ACTIVE CALLS</h3>
     <div id="activeIncidents"></div>
@@ -191,24 +157,19 @@
     <div id="map" style="height:300px;"></div>
   </div>
 
-  <!-- UNITS -->
   <div class="panel" id="unitsPage">
     <h3>UNITS</h3>
     <div id="unitsList"></div>
   </div>
 
-  <!-- CHAT -->
   <div class="panel" id="chatPage">
     <h3>CHAT</h3>
-
     <div id="chatMessages"></div>
-
-    <input id="chatName" placeholder="Unit Name">
+    <input id="chatName" placeholder="Name">
     <input id="chatInput" placeholder="Message">
     <button onclick="sendMessage()">SEND</button>
   </div>
 
-  <!-- HISTORY -->
   <div class="panel" id="historyPage">
     <h3>HISTORY</h3>
     <div id="historyList"></div>
@@ -217,7 +178,6 @@
 </div>
 </div>
 
-<!-- DISPATCH -->
 <div class="dispatch">
 
   <div id="adminBox">
@@ -227,13 +187,13 @@
   </div>
 
   <div id="dispatchControls" style="display:none;">
-    <h3>NEW INCIDENT</h3>
+    <h3>NEW CALL</h3>
 
     <select id="callType">
       <option>🔥 Structure Fire</option>
       <option>🚑 Medical</option>
-      <option>🚗 MVA</option>
       <option>🛟 Rescue</option>
+      <option>🚗 MVA</option>
     </select>
 
     <input id="address" placeholder="Address">
