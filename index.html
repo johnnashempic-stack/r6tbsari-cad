@@ -1,137 +1,97 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mobile Data Terminal</title>
-
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-
-<style>
-body{
-  margin:0;
-  font-family:Arial;
-  background:#0b0c10;
-  color:#fff;
-  display:flex;
-  height:100vh;
-}
-
-.sidebar{
-  width:210px;
-  background:#111319;
-  padding:10px;
-  border-right:1px solid #2a2a2a;
-}
-
-.nav{
-  padding:10px;
-  margin:6px 0;
-  background:#161820;
-  cursor:pointer;
-}
-
-.main{
-  flex:1;
-  display:grid;
-  grid-template-columns:2fr 1fr;
-  gap:10px;
-  padding:10px;
-}
-
-.panel{
-  background:#14161d;
-  border:1px solid #2b2b2b;
-  padding:10px;
-  overflow:auto;
-}
-
-.card{
-  background:#10121a;
-  border-left:4px solid #e63946;
-  padding:10px;
-  margin:8px 0;
-}
-
-.right{
-  width:260px;
-  background:#111319;
-  padding:10px;
-  border-left:1px solid #2a2a2a;
-}
-
-input,textarea,select,button{
-  width:100%;
-  margin-top:5px;
-  padding:8px;
-  background:#1a1c24;
-  color:#fff;
-  border:1px solid #333;
-}
-
-button{
-  background:#e63946;
-  cursor:pointer;
-}
-
-#map{
-  height:220px;
-  margin-top:10px;
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BFP MDT - RESCUER</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { 
+            font-family: monospace; margin:0; padding:0; 
+            background:#0a0a0a; color:#00cc00; overflow:hidden; 
+            font-size: 14px; line-height: 1.4;
+        }
+        header { 
+            background:#000; padding:8px; text-align:center; 
+            border-bottom:4px solid #ffaa00; font-size:18px; font-weight:bold;
+        }
+        .toolbar { 
+            background:#1a1a1a; padding:6px; display:flex; flex-wrap:wrap; gap:4px; 
+            border-bottom:2px solid #ffaa00;
+        }
+        button { 
+            background:#003300; color:#00ff00; border:2px solid #00aa00; 
+            padding:10px 14px; margin:3px; cursor:pointer; font-family:monospace; font-weight:bold;
+            min-width: 110px;
+        }
+        button:hover, button.active { background:#00aa00; color:#000; }
+        .container { display: flex; height: calc(100vh - 210px); }
+        .sidebar { 
+            width: 340px; background: #111; padding: 12px; overflow-y: auto; 
+            border-right: 3px solid #ffaa00; font-size:13px;
+        }
+        .map { flex: 1; position: relative; }
+        #map { height: 100%; width: 100%; }
+        .status-bar { 
+            background: #000; padding: 8px; font-size: 13px; 
+            display: flex; justify-content: space-between; flex-wrap: wrap; 
+            border-top: 3px solid #ffaa00; align-items: center;
+        }
+        .log { 
+            height: 130px; overflow-y: auto; background: #000; padding: 8px; 
+            font-family: monospace; font-size: 12px; border-top:2px solid #333;
+        }
+        .incident-card { 
+            border: 2px solid #ffaa00; margin: 10px 0; padding: 12px; 
+            background: #1a1a1a; cursor: pointer;
+        }
+        .incident-card.priority-high { border-color: #ff4444; }
+        .log-entry { color: #00ffaa; }
+    </style>
 </head>
-
 <body>
+    <header>
+        FD MDT • ENGINE 1 • TRAINING SIMULATION
+        <p id="role-indicator" style="font-size:13px;margin:4px 0 0;color:#ffaa00;">FIELD UNIT MODE</p>
+        <button onclick="showLogin()" id="login-btn" style="position:absolute;top:8px;right:10px;background:#ffaa00;color:#000;">DISPATCHER LOGIN</button>
+        <button onclick="logout()" id="logout-btn" style="display:none;position:absolute;top:8px;right:10px;background:#aa0000;color:#fff;">LOGOUT</button>
+    </header>
+    
+    <div class="toolbar" id="main-toolbar">
+        <button onclick="updateStatus('En Route')">EN ROUTE</button>
+        <button onclick="updateStatus('On Scene')">ON SCENE</button>
+        <button onclick="updateStatus('Available')">AVAILABLE</button>
+        <button onclick="sendMessage()">RADIO DISPATCH</button>
+        <button onclick="showPreplan()">PREPLAN</button>
+    </div>
 
-<div class="sidebar">
-  <h3>🚒 MDT CAD</h3>
-  <div class="nav" onclick="view('calls')">CALLS</div>
-  <div class="nav" onclick="view('units')">UNITS</div>
-  <div class="nav" onclick="view('chat')">CHAT</div>
-</div>
+    <div class="container" id="main-content">
+        <div class="sidebar" id="sidebar"></div>
+        <div class="map">
+            <div id="map"></div>
+        </div>
+    </div>
+    
+    <div class="status-bar">
+        <span><strong>CAD LINK:</strong> <span id="cad-status" style="color:#00ff00">CONNECTED</span></span>
+        <span><strong>AVL/GPS:</strong> <span id="gps">45.7800°N 108.5100°W</span></span>
+        <span><strong>UNIT:</strong> <span id="current-unit">E1</span></span>
+        <span><strong>STATUS:</strong> <span id="unit-status">En Route</span></span>
+    </div>
+    <div class="log" id="log"></div>
 
-<div class="main">
+    <!-- Login Modal -->
+    <div id="login-screen" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.97);z-index:1000;justify-content:center;align-items:center;flex-direction:column;color:#0f0;">
+        <div style="background:#111;padding:40px;border:4px solid #ffaa00;text-align:center;max-width:420px;">
+            <h2>DISPATCHER / CAD ADMIN</h2>
+            <input type="text" id="username" placeholder="admin" style="display:block;width:100%;margin:12px 0;padding:12px;background:#222;color:#0f0;border:2px solid #ffaa00;"><br>
+            <input type="password" id="password" placeholder="dispatch123" style="display:block;width:100%;margin:12px 0;padding:12px;background:#222;color:#0f0;border:2px solid #ffaa00;"><br>
+            <button onclick="attemptLogin()" style="background:#ffaa00;color:#000;padding:12px 30px;font-size:16px;">LOGIN</button>
+            <button onclick="cancelLogin()" style="background:#444;margin-left:15px;padding:12px 20px;">CANCEL</button>
+        </div>
+    </div>
 
-  <div class="panel" id="callsPanel"></div>
-  <div class="panel" id="unitsPanel" style="display:none"></div>
-  <div class="panel" id="chatPanel" style="display:none"></div>
-
-</div>
-
-<div class="right">
-
-  <h3>DISPATCH LOGIN</h3>
-  <input type="password" id="pass">
-  <button onclick="login()">LOGIN</button>
-
-  <div id="dispatchUI" style="display:none">
-
-    <h3>NEW CALL</h3>
-
-    <select id="type">
-      <option>🔥 Fire</option>
-      <option>🚑 Medical</option>
-      <option>🛟 Rescue</option>
-      <option>🚗 MVA</option>
-    </select>
-
-    <input id="address" placeholder="Address">
-    <textarea id="details" placeholder="Details"></textarea>
-
-    <button onclick="createCall()">DISPATCH CALL</button>
-
-  </div>
-
-  <div id="map"></div>
-
-</div>
-
-<audio id="alarm">
-  <source src="https://freesound.org/data/previews/522/522459_11552799-lq.mp3">
-</audio>
-
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script src="app.js"></script>
-
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
