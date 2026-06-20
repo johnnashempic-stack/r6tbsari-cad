@@ -1,86 +1,96 @@
 const BIN_ID = "6a36000ef5f4af5e29128246";
-const API_KEY = "$2a$10$xqh.MDd939MiRTFQpJ4GJebf7kSrK5dnmT/a8E0DG9bFNqdLW5vzS";
+const API_KEY = "YOUR_KEY";
 const URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
 let role = null;
 let calls = [];
 let presence = {};
 let map;
+let started = false;
 
-/* BOOT */
+/* SAFE LOG */
+function log(msg){
+    console.log(msg);
+}
+
+/* BOOT CHECK (CRITICAL FIX) */
+window.onload = () => {
+    console.log("CAD LOADED OK");
+};
+
+/* LOGIN SYSTEM */
 function adminLogin(){
-    const pass = prompt("Dispatch Code:");
+    const pass = prompt("Dispatch Access Code:");
 
     if(pass === "IR6TBSARI"){
         role = "dispatcher";
         startSystem();
-        document.getElementById("toolbar").style.display = "block";
     } else {
-        alert("DENIED");
+        alert("ACCESS DENIED");
     }
 }
 
 function unitLogin(){
-    const unit = prompt("Enter Unit (RESCUE 1-5):");
-    if(!unit) return;
-
     role = "field";
-
-    if(!presence.activeUnits) presence.activeUnits = {};
-    presence.activeUnits[unit] = true;
-
     startSystem();
 }
 
-/* START SYSTEM */
+/* MAIN START (FIXED FLOW) */
 function startSystem(){
+    if(started) return;
+    started = true;
+
     document.getElementById("startScreen").style.display = "none";
     document.getElementById("main").style.display = "block";
 
-    initMap();
+    if(role === "dispatcher"){
+        document.getElementById("toolbar").style.display = "block";
+    }
+
+    setTimeout(initMap, 200);
     loadData();
 
     setInterval(loadData, 3000);
 }
 
-/* MAP INIT (FIXED SIZE ISSUE) */
+/* MAP FIX (IMPORTANT) */
 function initMap(){
-    setTimeout(() => {
-        map = L.map("map").setView([10.7202,122.5621],13);
+    if(map) return;
 
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
-            attribution:"© OpenStreetMap"
-        }).addTo(map);
+    map = L.map("map").setView([10.7202, 122.5621], 13);
 
-        map.invalidateSize();
-    }, 200);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "© OpenStreetMap"
+    }).addTo(map);
+
+    setTimeout(() => map.invalidateSize(), 300);
 }
 
-/* LOAD */
+/* LOAD DATA (SAFE) */
 async function loadData(){
     try{
-        const res = await fetch(URL,{
-            headers:{ "X-Master-Key":API_KEY }
+        const res = await fetch(URL, {
+            headers: { "X-Master-Key": API_KEY }
         });
 
         const data = await res.json();
 
         calls = data.record.calls || [];
-        presence = data.record.presence || { activeUnits:{} };
+        presence = data.record.presence || {};
 
         render();
-    } catch(e){
-        console.log("LOAD ERROR", e);
+    } catch(err){
+        console.log("LOAD ERROR:", err);
     }
 }
 
-/* SAVE */
+/* SAVE DATA */
 async function saveData(){
-    await fetch(URL,{
-        method:"PUT",
-        headers:{
-            "Content-Type":"application/json",
-            "X-Master-Key":API_KEY
+    await fetch(URL, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json",
+            "X-Master-Key": API_KEY
         },
         body: JSON.stringify({
             calls,
@@ -105,8 +115,7 @@ function createCall(){
         id: Date.now(),
         type,
         location: loc,
-        status: "DISPATCHED",
-        assignedUnit: null
+        status: "DISPATCHED"
     });
 
     saveData();
@@ -118,14 +127,13 @@ function respond(id){
     let c = calls.find(x => x.id === id);
     if(!c) return;
 
-    c.assignedUnit = "FIELD UNIT";
     c.status = "RESPONDING";
 
     saveData();
     render();
 }
 
-/* RENDER (NOW WORKING) */
+/* RENDER UI */
 function render(){
     const panel = document.getElementById("panel");
 
@@ -138,17 +146,17 @@ function render(){
 
     calls.forEach(c => {
         const div = document.createElement("div");
+
         div.style.border = "1px solid #ffaa00";
         div.style.margin = "10px";
         div.style.padding = "10px";
         div.style.background = "#1a1a1a";
 
         div.innerHTML = `
-        <b>${c.type}</b><br>
-        📍 ${c.location}<br>
-        STATUS: ${c.status}<br><br>
-
-        <button onclick="respond(${c.id})">RESPOND</button>
+            <b>${c.type}</b><br>
+            📍 ${c.location}<br>
+            STATUS: ${c.status}<br><br>
+            <button onclick="respond(${c.id})">RESPOND</button>
         `;
 
         panel.appendChild(div);
