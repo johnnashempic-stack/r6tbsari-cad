@@ -1,98 +1,158 @@
-// FD MDT Simulator - Strong MDT Theme - Educational Training Only
-let currentRole = 'field';
-let map, incidentMarkers = [], unitMarkers = [], hydrantMarkers = [];
+let map;
+let currentRole = "field";
+let selectedUnit = null;
 
 let incidents = [
-    { id: 1, type: 'STRUCTURE FIRE', location: '123 MAIN ST', status: 'En Route', units: ['E1','L2'], lat:45.783, lng:-108.505, priority:'high', notes:'Heavy smoke, preplan loaded' },
-    { id: 2, type: 'MEDICAL', location: '456 OAK AVE', status: 'On Scene', units: ['A3'], lat:45.775, lng:-108.495, priority:'medium', notes:'CPR in progress' }
+    { id:1, type:"FIRE", location:"123 MAIN ST", status:"DISPATCHED", units:[], priority:"high" },
+    { id:2, type:"MEDICAL", location:"456 OAK AVE", status:"ON SCENE", units:["A3"], priority:"medium" }
 ];
 
 let units = [
-    { name: 'E1', status: 'En Route', lat:45.780, lng:-108.510 },
-    { name: 'L2', status: 'Dispatched', lat:45.770, lng:-108.520 },
-    { name: 'A3', status: 'On Scene', lat:45.775, lng:-108.495 }
+    { name:"E1", status:"AVAILABLE" },
+    { name:"L2", status:"AVAILABLE" },
+    { name:"A3", status:"AVAILABLE" }
 ];
 
-let hydrants = [{lat:45.782,lng:-108.502,id:'H1'},{lat:45.777,lng:-108.498,id:'H2'}];
-
-function log(msg) {
-    const logEl = document.getElementById('log');
-    const time = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-    logEl.innerHTML += `<div>[${time}] ${msg}</div>`;
-    logEl.scrollTop = logEl.scrollHeight;
+// ================= LOG =================
+function log(msg){
+    const el=document.getElementById("log");
+    const t=new Date().toLocaleTimeString();
+    el.innerHTML+=`[${t}] ${msg}<br>`;
+    el.scrollTop=el.scrollHeight;
 }
 
-function initMap() {
-    map = L.map('map').setView([45.78, -108.50], 14);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap - Training Use' }).addTo(map);
-    renderIncidentsOnMap();
-    renderUnitsOnMap();
-    renderHydrants();
+// ================= MAP =================
+function initMap(){
+    map=L.map("map").setView([45.78,-108.50],14);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+    render();
+    log("CAD SYSTEM ONLINE");
 }
 
-function renderIncidentsOnMap() { /* same as previous */ }
-function renderUnitsOnMap() { /* same as previous */ }
-function renderHydrants() { /* same as previous */ }
+// ================= RENDER =================
+function render(){
+    const side=document.getElementById("sidebar");
+    side.innerHTML="<h3 style='color:#ffaa00'>ACTIVE CALLS</h3>";
 
-function renderSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    sidebar.innerHTML = '<h2 style="color:#ffaa00">ACTIVE INCIDENTS</h2>';
-    incidents.forEach(inc => {
-        const div = document.createElement('div');
-        div.className = `incident-card ${inc.priority === 'high' ? 'priority-high' : ''}`;
-        div.innerHTML = `<strong>${inc.type} #${inc.id}</strong><br>📍 ${inc.location}<br>Status: ${inc.status}<br>Units: ${inc.units.join(', ')}`;
-        div.onclick = () => { focusIncident(inc.id); };
-        sidebar.appendChild(div);
+    incidents.forEach(i=>{
+        const div=document.createElement("div");
+        div.className="incident-card"+(i.priority==="high"?" priority-high":"");
+
+        div.innerHTML=`
+        <b>#${i.id} ${i.type}</b><br>
+        ${i.location}<br>
+        STATUS: ${i.status}<br>
+        UNITS: ${i.units.join(", ")||"NONE"}<br><br>
+
+        <button onclick="setStatus(${i.id},'DISPATCHED')">DISPATCHED</button>
+        <button onclick="setStatus(${i.id},'EN ROUTE')">EN ROUTE</button>
+        <button onclick="setStatus(${i.id},'ON SCENE')">ON SCENE</button>
+        <button onclick="setStatus(${i.id},'CLOSED')">CLOSE</button>
+        <button onclick="assignUnit(${i.id})">ASSIGN UNIT</button>
+        `;
+
+        side.appendChild(div);
     });
 }
 
-function updateStatus(status) {
-    document.getElementById('unit-status').textContent = status;
-    log(`Unit E1 status updated to ${status}`);
-    renderSidebar();
+// ================= INCIDENT CREATION =================
+function createIncident(){
+    const type=prompt("Type:");
+    const location=prompt("Location:");
+    const priority=prompt("Priority (high/medium/low):");
+
+    if(!type||!location)return;
+
+    const inc={
+        id:incidents.length+1,
+        type,
+        location,
+        status:"DISPATCHED",
+        units:[],
+        priority:priority||"medium"
+    };
+
+    incidents.unshift(inc);
+    render();
+    log(`NEW CALL CREATED: #${inc.id} ${type}`);
 }
 
-function sendMessage() {
-    const msg = prompt('Enter radio message to Dispatch:');
-    if (msg) log(`📡 TO DISPATCH: ${msg}`);
+// ================= STATUS =================
+function setStatus(id,status){
+    const i=incidents.find(x=>x.id===id);
+    if(!i)return;
+    i.status=status;
+    render();
+    log(`CALL #${id} STATUS: ${status}`);
 }
 
-function showPreplan() {
-    log('PREPLAN LOADED - Hydrants & Building Info');
-    alert('PREPLAN: 123 Main St\nHydrants: H1 (150ft), H2\nAccess: Rear alley • Hazmat: None');
+// ================= UNIT ASSIGN =================
+function assignUnit(id){
+    const unit=prompt("Assign Unit (E1, L2, A3):");
+    const i=incidents.find(x=>x.id===id);
+    if(!i||!unit)return;
+
+    i.units.push(unit);
+    render();
+    log(`UNIT ${unit} ASSIGNED TO CALL #${id}`);
 }
 
-function showLogin() { document.getElementById('login-screen').style.display = 'flex'; }
-function cancelLogin() { document.getElementById('login-screen').style.display = 'none'; }
-
-function attemptLogin() {
-    const user = document.getElementById('username').value.trim();
-    const pass = document.getElementById('password').value.trim();
-    if (user === 'admin' && pass === 'dispatch123') {
-        currentRole = 'dispatcher';
-        document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('login-btn').style.display = 'none';
-        document.getElementById('logout-btn').style.display = 'block';
-        document.getElementById('role-indicator').textContent = 'DISPATCHER MODE - FULL ACCESS';
-        log('🔐 DISPATCHER LOGGED IN - RBAC ELEVATED');
-        // Add dispatcher toolbar if needed
-    } else {
-        alert('Invalid - Demo: admin / dispatch123');
+// ================= FIELD MODE =================
+function enterFieldMode(){
+    const unit=prompt("Select Unit (E1/L2/A3):");
+    if(!unit){
+        alert("Unit required");
+        return;
     }
+
+    selectedUnit=unit;
+    document.getElementById("current-unit").textContent=unit;
+    log(`FIELD MODE ACTIVE: ${unit}`);
 }
 
-function logout() {
-    currentRole = 'field';
-    document.getElementById('login-btn').style.display = 'block';
-    document.getElementById('logout-btn').style.display = 'none';
-    document.getElementById('role-indicator').textContent = 'FIELD UNIT MODE';
-    log('👋 Dispatcher logged out');
+// ================= STATUS UPDATE =================
+function updateStatus(s){
+    if(!selectedUnit){
+        alert("Select unit first");
+        return;
+    }
+
+    document.getElementById("unit-status").textContent=s;
+    log(`UNIT ${selectedUnit}: ${s}`);
 }
 
-function focusIncident(id) { /* map flyTo logic */ }
+// ================= RADIO =================
+function sendMessage(){
+    const msg=prompt("RADIO:");
+    if(msg)log(`RADIO: ${msg}`);
+}
 
-window.onload = () => {
-    initMap();
-    renderSidebar();
-    log('✅ FD MDT CONNECTED - ACTIVE');
-};
+// ================= LOGIN =================
+function showLogin(){document.getElementById("login-screen").style.display="flex";}
+function cancelLogin(){document.getElementById("login-screen").style.display="none";}
+
+function attemptLogin(){
+    const u=document.getElementById("username").value;
+    const p=document.getElementById("password").value;
+
+    if(u==="admin"&&p==="dispatch123"){
+        currentRole="dispatcher";
+        document.getElementById("login-screen").style.display="none";
+        document.getElementById("login-btn").style.display="none";
+        document.getElementById("logout-btn").style.display="block";
+        document.getElementById("role-indicator").textContent="DISPATCH ACTIVE";
+        log("DISPATCH LOGIN SUCCESS");
+    } else alert("INVALID");
+}
+
+function logout(){
+    currentRole="field";
+    selectedUnit=null;
+    document.getElementById("current-unit").textContent="NONE";
+    document.getElementById("login-btn").style.display="block";
+    document.getElementById("logout-btn").style.display="none";
+    document.getElementById("role-indicator").textContent="FIELD UNIT";
+    log("LOGGED OUT");
+}
+
+window.onload=initMap;
