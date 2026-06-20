@@ -1,9 +1,8 @@
 let map;
-let role = "field";
 let selectedUnit = null;
-let calls = []; // CLEAN START
+let role = "field";
+let calls = []; // FRESH START
 
-// ================= LOG =================
 function log(msg){
     const el=document.getElementById("log");
     const t=new Date().toLocaleTimeString();
@@ -11,146 +10,84 @@ function log(msg){
     el.scrollTop = el.scrollHeight;
 }
 
-// ================= MAP (ILOILO BASE) =================
+/* INIT MAP (ILOILO) */
 function initMap(){
     map = L.map("map").setView([10.7202, 122.5621], 13);
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution:"© OpenStreetMap"
     }).addTo(map);
+}
 
+/* START AFTER UNIT SELECT */
+function selectUnit(unit){
+    selectedUnit = unit;
+
+    document.getElementById("unitScreen").style.display = "none";
+    document.getElementById("main").style.display = "flex";
+    document.getElementById("toolbar").style.display = "flex";
+    document.getElementById("roleText").innerText = unit;
+
+    initMap();
     render();
-    log("CAD ONLINE • ILOILO BASE ACTIVE");
+
+    log(`UNIT LOADED: ${unit}`);
 }
 
-// ================= RENDER =================
-function render(){
-    const side=document.getElementById("sidebar");
-    side.innerHTML="<h3 style='color:#ffaa00'>ACTIVE CALLS</h3>";
-
-    if(calls.length === 0){
-        side.innerHTML += "<p>No active incidents</p>";
-        return;
-    }
-
-    calls.forEach(c=>{
-        const div=document.createElement("div");
-        div.className="card"+(c.priority==="high"?" high":"");
-
-        div.innerHTML=`
-        <b>#${c.id} ${c.type}</b><br>
-        📍 ${c.location}<br>
-        STATUS: ${c.status}<br>
-        UNIT: ${c.unit || "UNASSIGNED"}<br><br>
-
-        <button onclick="setStatus(${c.id},'DISPATCHED')">DISPATCHED</button>
-        <button onclick="setStatus(${c.id},'EN ROUTE')">EN ROUTE</button>
-        <button onclick="setStatus(${c.id},'ON SCENE')">ON SCENE</button>
-        <button onclick="closeCall(${c.id})">CLOSE</button>
-        `;
-
-        side.appendChild(div);
-    });
-}
-
-// ================= CREATE CALL (DISPATCH ONLY) =================
+/* DISPATCH ONLY CALL CREATION */
 function createCall(){
     if(role !== "dispatcher"){
-        alert("DISPATCH ACCESS ONLY");
+        alert("DISPATCH ONLY");
         return;
     }
 
-    const type=prompt("CALL TYPE:");
-    const location=prompt("LOCATION (ILOILO):");
-    const priority=prompt("PRIORITY (high/medium/low):");
+    let type = prompt("CALL TYPE:");
+    let location = prompt("LOCATION (ILOILO):");
 
     if(!type || !location) return;
 
     calls.unshift({
-        id:calls.length+1,
+        id: calls.length + 1,
         type,
         location,
-        priority:priority||"medium",
         status:"DISPATCHED",
         unit:null
     });
 
     render();
-    log(`NEW CALL CREATED: #${calls.length} ${type}`);
+    log(`NEW CALL: ${type}`);
 }
 
-// ================= STATUS CONTROL =================
-function setStatus(id,status){
-    const c=calls.find(x=>x.id===id);
-    if(!c) return;
-
-    c.status=status;
-    render();
-    log(`CALL #${id} → ${status}`);
-}
-
-// ================= CLOSE =================
-function closeCall(id){
-    calls=calls.filter(x=>x.id!==id);
-    render();
-    log(`CALL #${id} CLOSED`);
-}
-
-// ================= UNIT MENU =================
-function openUnitMenu(){
-    document.getElementById("unitScreen").style.display="flex";
-}
-
-function selectUnit(u){
-    selectedUnit=u;
-    document.getElementById("unitScreen").style.display="none";
-    document.getElementById("roleText").innerText=`FIELD UNIT • ${u}`;
-    log(`UNIT ASSIGNED: ${u}`);
-}
-
-// ================= FIELD STATUS =================
-function updateStatus(s){
+/* STATUS */
+function setStatus(status){
     if(!selectedUnit){
-        alert("Select unit first");
+        alert("No unit selected");
         return;
     }
 
-    log(`${selectedUnit} STATUS: ${s}`);
+    log(`${selectedUnit} → ${status}`);
 }
 
-// ================= LOGIN =================
-function openLogin(){
-    document.getElementById("loginModal").style.display="flex";
-}
+/* RENDER CALLS */
+function render(){
+    const side=document.getElementById("sidebar");
+    side.innerHTML="<h3>ACTIVE CALLS</h3>";
 
-function closeLogin(){
-    document.getElementById("loginModal").style.display="none";
-}
-
-function login(){
-    const u=document.getElementById("user").value;
-    const p=document.getElementById("pass").value;
-
-    if(u==="admin" && p==="dispatch123"){
-        role="dispatcher";
-        document.getElementById("loginModal").style.display="none";
-        document.getElementById("loginBtn").style.display="none";
-        document.getElementById("logoutBtn").style.display="block";
-        document.getElementById("roleText").innerText="DISPATCH ACTIVE";
-        log("DISPATCH LOGIN SUCCESS");
-    } else {
-        alert("INVALID");
+    if(calls.length === 0){
+        side.innerHTML += "<p>No active calls</p>";
+        return;
     }
-}
 
-function logout(){
-    role="field";
-    selectedUnit=null;
-    document.getElementById("loginBtn").style.display="block";
-    document.getElementById("logoutBtn").style.display="none";
-    document.getElementById("roleText").innerText="FIELD UNIT";
-    log("LOGGED OUT");
-}
+    calls.forEach(c=>{
+        let div=document.createElement("div");
+        div.className="card";
 
-// ================= INIT =================
-window.onload=initMap;
+        div.innerHTML=`
+        <b>#${c.id} ${c.type}</b><br>
+        ${c.location}<br>
+        STATUS: ${c.status}
+        `;
+
+        side.appendChild(div);
+    });
+}
