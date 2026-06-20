@@ -1,11 +1,11 @@
 const BIN_ID = "6a36000ef5f4af5e29128246";
-const API_KEY = "$2a$10$xqh.MDd939MiRTFQpJ4GJebf7kSrK5dnmT/a8E0DG9bFNqdLW5vzS";
+const API_KEY = "YOUR_KEY";
 const URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
 let map;
+let calls = [];
 let role = "field";
 let selectedUnit = null;
-let calls = [];
 
 /* LOG */
 function log(msg){
@@ -38,7 +38,7 @@ async function saveData(){
     });
 }
 
-/* MAP (ILOILO) */
+/* MAP ILOILO */
 function initMap(){
     map = L.map("map").setView([10.7202,122.5621],13);
 
@@ -49,15 +49,8 @@ function initMap(){
     setTimeout(()=>map.invalidateSize(),200);
 }
 
-/* UNIT SELECT + PASSWORD */
+/* UNIT SELECT (NO PASSWORD) */
 function selectUnit(unit){
-    const pass = prompt("Dispatch Access Code:");
-
-    if(pass !== "IR6TBSARI"){
-        alert("ACCESS DENIED");
-        return;
-    }
-
     selectedUnit = unit;
 
     document.getElementById("unitScreen").style.display="none";
@@ -68,15 +61,32 @@ function selectUnit(unit){
 
     initMap();
     loadData();
-    render();
 
     log(`UNIT ONLINE: ${unit}`);
 }
 
-/* CREATE CALL (DISPATCH ONLY OPTIONAL) */
+/* DISPATCH LOGIN ONLY */
+function dispatchLogin(){
+    const pass = prompt("Dispatch Access Code:");
+
+    if(pass === "IR6TBSARI"){
+        role = "dispatcher";
+        alert("DISPATCH MODE ENABLED");
+        log("Dispatcher logged in");
+    } else {
+        alert("ACCESS DENIED");
+    }
+}
+
+/* CREATE CALL (DISPATCH ONLY) */
 function createCall(){
-    let type = prompt("CALL TYPE:");
-    let loc = prompt("LOCATION:");
+    if(role !== "dispatcher"){
+        alert("DISPATCH ONLY");
+        return;
+    }
+
+    const type = prompt("CALL TYPE:");
+    const loc = prompt("LOCATION:");
 
     if(!type || !loc) return;
 
@@ -103,19 +113,25 @@ function respond(id){
     saveData();
     render();
 
-    log(`${selectedUnit} RESPONDING #${id}`);
+    log(`${selectedUnit} RESPONDING`);
 }
 
 /* STATUS */
 function setStatus(status){
-    if(!selectedUnit) return alert("No unit");
+    if(!selectedUnit) return;
 
     log(`${selectedUnit} → ${status}`);
 }
 
 /* END INCIDENT */
 function endIncident(id){
+    if(role !== "dispatcher"){
+        alert("DISPATCH ONLY");
+        return;
+    }
+
     calls = calls.filter(c=>c.id!==id);
+
     saveData();
     render();
 
@@ -146,10 +162,12 @@ function render(){
         UNIT: ${c.assignedUnit || "NONE"}<br><br>
 
         <button onclick="respond(${c.id})">RESPOND</button>
-        <button onclick="setStatus('ON SCENE')">ON SCENE</button>
         <button onclick="endIncident(${c.id})">END</button>
         `;
 
         s.appendChild(div);
     });
 }
+
+/* SYNC */
+setInterval(loadData,3000);
