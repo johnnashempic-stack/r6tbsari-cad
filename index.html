@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Rescue Data Terminal</title>
+<title>RESCUE MDT • ILOILO</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
@@ -16,18 +16,18 @@ body{
     overflow:hidden;
 }
 
+/* HEADER */
 header{
     background:#000;
     padding:10px;
     text-align:center;
     border-bottom:3px solid #ffaa00;
     font-weight:bold;
-    font-size:18px;
 }
 
+/* TOOLBAR */
 .toolbar{
-    display:flex;
-    flex-wrap:wrap;
+    display:none;
     gap:5px;
     padding:6px;
     background:#111;
@@ -44,14 +44,10 @@ button{
     min-width:120px;
 }
 
-button:hover{
-    background:#00aa00;
-    color:#000;
-}
-
+/* MAIN LAYOUT */
 .container{
-    display:flex;
-    height:calc(100vh - 220px);
+    display:none;
+    height:calc(100vh - 200px);
 }
 
 .sidebar{
@@ -67,10 +63,7 @@ button:hover{
     height:100%;
 }
 
-.map{
-    flex:1;
-}
-
+/* LOG */
 .log{
     height:120px;
     background:#000;
@@ -87,36 +80,18 @@ button:hover{
     background:#1a1a1a;
 }
 
-.high{border-color:#ff4444;}
-
-/* MODALS */
-.modal{
-    display:none;
+/* MODALS FIX */
+.modal, #unitScreen{
     position:fixed;
     inset:0;
-    background:rgba(0,0,0,0.95);
+    display:flex;
     justify-content:center;
     align-items:center;
-}
-
-.modal-box{
-    background:#111;
-    border:3px solid #ffaa00;
-    padding:25px;
-    text-align:center;
-    width:320px;
-}
-
-/* UNIT SCREEN */
-#unitScreen{
-    display:none;
-    position:fixed;
-    inset:0;
     background:#000;
-    justify-content:center;
-    align-items:center;
+    z-index:99999;
 }
 
+/* UNIT BOX */
 .unit-box{
     background:#111;
     border:3px solid #ffaa00;
@@ -124,7 +99,7 @@ button:hover{
     text-align:center;
 }
 
-.unit-btn{
+.unit-box button{
     display:block;
     margin:8px auto;
     width:200px;
@@ -134,60 +109,36 @@ button:hover{
 
 <body>
 
-<header>
-RESCUE CAD • ILOILO DISPATCH CENTER
-<p id="roleText" style="color:#ffaa00;font-size:12px;">FIELD UNIT</p>
-
-<button onclick="openLogin()" id="loginBtn"
-style="position:absolute;right:10px;top:10px;background:#ffaa00;color:#000;">
-DISPATCH LOGIN
-</button>
-
-<button onclick="logout()" id="logoutBtn"
-style="display:none;position:absolute;right:10px;top:10px;background:#aa0000;color:#fff;">
-LOGOUT
-</button>
+<header> 
+RESCUE MDT • ILOILO DISPATCH
+<p id="roleText">SELECT UNIT</p>
 </header>
 
-<div class="toolbar">
-<button onclick="createCall()">NEW CALL</button>
-<button onclick="updateStatus('EN ROUTE')">EN ROUTE</button>
-<button onclick="updateStatus('ON SCENE')">ON SCENE</button>
-<button onclick="updateStatus('AVAILABLE')">AVAILABLE</button>
-<button onclick="openUnitMenu()">SELECT UNIT</button>
+<!-- UNIT SELECTION FIRST -->
+<div id="unitScreen">
+<div class="unit-box">
+<h2>SELECT RESCUE UNIT</h2>
+<button onclick="selectUnit('RESCUE 1')">RESCUE 1</button>
+<button onclick="selectUnit('RESCUE 2')">RESCUE 2</button>
+<button onclick="selectUnit('RESCUE 3')">RESCUE 3</button>
+<button onclick="selectUnit('RESCUE 4')">RESCUE 4</button>
+<button onclick="selectUnit('RESCUE 5')">RESCUE 5</button>
+</div>
 </div>
 
-<div class="container">
+<div class="toolbar" id="toolbar">
+<button onclick="createCall()">NEW CALL</button>
+<button onclick="setStatus('EN ROUTE')">EN ROUTE</button>
+<button onclick="setStatus('ON SCENE')">ON SCENE</button>
+<button onclick="setStatus('AVAILABLE')">AVAILABLE</button>
+</div>
+
+<div class="container" id="main">
 <div class="sidebar" id="sidebar"></div>
 <div class="map"><div id="map"></div></div>
 </div>
 
 <div class="log" id="log"></div>
-
-<!-- LOGIN -->
-<div class="modal" id="loginModal">
-<div class="modal-box">
-<h3>DISPATCH LOGIN</h3>
-<input id="user" placeholder="username" style="width:100%;padding:8px;margin:5px;">
-<input id="pass" type="password" placeholder="password" style="width:100%;padding:8px;margin:5px;">
-<button onclick="login()">LOGIN</button>
-<button onclick="closeLogin()">CANCEL</button>
-</div>
-</div>
-
-<!-- UNIT SELECTION -->
-<div id="unitScreen">
-<div class="unit-box">
-<h2>SELECT RESCUE UNIT</h2>
-
-<button class="unit-btn" onclick="selectUnit('RESCUE 1')">RESCUE 1</button>
-<button class="unit-btn" onclick="selectUnit('RESCUE 2')">RESCUE 2</button>
-<button class="unit-btn" onclick="selectUnit('RESCUE 3')">RESCUE 3</button>
-<button class="unit-btn" onclick="selectUnit('RESCUE 4')">RESCUE 4</button>
-<button class="unit-btn" onclick="selectUnit('RESCUE 5')">RESCUE 5</button>
-
-</div>
-</div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="app.js"></script>
