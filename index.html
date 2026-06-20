@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>FIRE MDT v5.1</title>
+<title>FIRE MDT CAD</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
@@ -18,54 +18,35 @@ body {
   height:100vh;
 }
 
-/* LEFT */
 .sidebar {
   width:210px;
   background:#111319;
-  border-right:1px solid #2a2a2a;
   padding:10px;
-}
-
-.logo {
-  text-align:center;
-  padding:12px;
-  background:#151720;
-  color:#e63946;
-  font-weight:bold;
-  margin-bottom:10px;
+  border-right:1px solid #2a2a2a;
 }
 
 .nav {
   padding:10px;
   margin:6px 0;
   background:#161820;
-  border-radius:6px;
   cursor:pointer;
 }
 
-.nav:hover {
-  background:#e63946;
-}
-
-/* CENTER */
 .main {
   flex:1;
   display:grid;
-  grid-template-columns: 2.2fr 1.3fr;
+  grid-template-columns: 2fr 1fr;
   gap:10px;
   padding:10px;
 }
 
-/* PANEL */
 .panel {
   background:#14161d;
   border:1px solid #2b2b2b;
-  border-radius:8px;
   padding:10px;
   overflow:auto;
 }
 
-/* CALL CARD */
 .card {
   background:#10121a;
   border-left:4px solid #e63946;
@@ -73,74 +54,61 @@ body {
   margin:8px 0;
 }
 
-/* RIGHT */
 .right {
   width:260px;
   background:#111319;
-  border-left:1px solid #2a2a2a;
   padding:10px;
+  border-left:1px solid #2a2a2a;
 }
 
-/* INPUTS */
-input, textarea, select, button {
+input,textarea,select,button{
   width:100%;
   margin-top:5px;
   padding:8px;
   background:#1a1c24;
-  color:white;
-  border:1px solid #333;
-  border-radius:5px;
+  color:#fff;
 }
 
-button {
+button{
   background:#e63946;
   cursor:pointer;
-  font-weight:bold;
 }
 </style>
-
 </head>
 
 <body>
 
-<!-- SIDEBAR -->
 <div class="sidebar">
-  <div class="logo">MDT CAD</div>
+  <h3>MDT</h3>
   <div class="nav" onclick="view('calls')">CALLS</div>
   <div class="nav" onclick="view('units')">UNITS</div>
   <div class="nav" onclick="view('chat')">CHAT</div>
-  <div class="nav" onclick="view('history')">HISTORY</div>
 </div>
 
-<!-- MAIN -->
 <div class="main">
-
   <div class="panel" id="callsPanel"></div>
   <div class="panel" id="unitsPanel" style="display:none"></div>
   <div class="panel" id="chatPanel" style="display:none"></div>
-
 </div>
 
-<!-- DISPATCH -->
 <div class="right">
 
-  <h3>DISPATCH LOGIN</h3>
+  <h3>DISPATCH</h3>
+
   <input type="password" id="pass">
   <button onclick="login()">LOGIN</button>
 
   <div id="dispatchUI" style="display:none">
 
-    <h3>NEW CALL</h3>
-
     <select id="type">
       <option>🔥 Fire</option>
       <option>🚑 Medical</option>
       <option>🛟 Rescue</option>
-      <option>🚗 VA</option>
+      <option>🚗 MVA</option>
     </select>
 
-    <input id="address" placeholder="Address">
-    <textarea id="details" placeholder="Details"></textarea>
+    <input id="address">
+    <textarea id="details"></textarea>
 
     <button onclick="createCall()">DISPATCH CALL</button>
     <button onclick="logout()">LOGOUT</button>
@@ -149,6 +117,14 @@ button {
 
 </div>
 
+<audio id="alarm">
+<source src="https://freesound.org/data/previews/522/522459_11552799-lq.mp3">
+</audio>
+
+<div id="map" style="height:0"></div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="app.js"></script>
+
 </body>
 </html>
