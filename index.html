@@ -22,14 +22,7 @@ header{
     text-align:center;
     border-bottom:3px solid #ffaa00;
     font-weight:bold;
-}
-
-.toolbar{
-    display:none;
-    padding:6px;
-    background:#111;
-    border-bottom:2px solid #ffaa00;
-    gap:5px;
+    position:relative;
 }
 
 button{
@@ -40,6 +33,13 @@ button{
     min-width:120px;
     font-weight:bold;
     cursor:pointer;
+}
+
+.toolbar{
+    display:none;
+    padding:6px;
+    background:#111;
+    border-bottom:2px solid #ffaa00;
 }
 
 .container{
@@ -55,12 +55,9 @@ button{
     border-right:3px solid #ffaa00;
 }
 
-#map{
-    width:100%;
-    height:100%;
-}
-
 .map{flex:1;}
+
+#map{width:100%;height:100%;}
 
 .log{
     height:120px;
@@ -101,6 +98,10 @@ button{
 <header>
 RESCUE CAD • ILOILO DISPATCH SYSTEM
 <p id="roleText">SELECT UNIT</p>
+
+<button onclick="dispatchLogin()" style="position:absolute;right:10px;top:10px;">
+DISPATCH LOGIN
+</button>
 </header>
 
 <!-- UNIT SELECT -->
