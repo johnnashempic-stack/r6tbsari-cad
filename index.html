@@ -3,6 +3,7 @@
 <head>
   <title>R6TBSARI FIRE MDT</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
   <style>
@@ -18,6 +19,7 @@
       overflow:hidden;
     }
 
+    /* SIDEBAR */
     .sidebar {
       width:200px;
       background:#111114;
@@ -47,6 +49,7 @@
       color:white;
     }
 
+    /* MAIN */
     .main {
       flex:1;
       display:flex;
@@ -61,6 +64,7 @@
       justify-content:space-between;
     }
 
+    /* DESKTOP GRID */
     .content {
       flex:1;
       display:grid;
@@ -97,8 +101,8 @@
 
     button {
       background:#ef4444;
-      cursor:pointer;
       font-weight:bold;
+      cursor:pointer;
     }
 
     #chatMessages {
@@ -116,62 +120,109 @@
       padding:10px;
     }
 
-    #unitsPage, #chatPage {
-      display:none;
+    /* MOBILE ONLY */
+    @media (max-width: 768px) {
+
+      body {
+        flex-direction:column;
+        overflow:auto;
+      }
+
+      .sidebar {
+        width:100%;
+        display:flex;
+        justify-content:space-around;
+      }
+
+      .content {
+        display:block;
+      }
+
+      .panel {
+        display:none;
+      }
+
+      .panel.active {
+        display:block;
+      }
+
+      .dispatch {
+        width:100%;
+        border-left:none;
+        border-top:1px solid #333;
+      }
+
+      #map {
+        height:250px !important;
+      }
     }
+
   </style>
 </head>
 
 <body>
 
+<!-- SIDEBAR -->
 <div class="sidebar">
   <div class="logo">FIRE MDT</div>
 
-  <div class="nav-item" onclick="showCalls()">CALLS</div>
-  <div class="nav-item" onclick="showUnits()">UNITS</div>
-  <div class="nav-item" onclick="showChat()">CHAT</div>
+  <div class="nav-item" onclick="setView('calls')">CALLS</div>
+  <div class="nav-item" onclick="setView('units')">UNITS</div>
+  <div class="nav-item" onclick="setView('chat')">CHAT</div>
+  <div class="nav-item" onclick="setView('history')">HISTORY</div>
 </div>
 
+<!-- MAIN -->
 <div class="main">
 
-  <header>
-    <div>🚒 R6TBSARI FIRE DISPATCH</div>
-    <div>LIVE SYNC</div>
-  </header>
+<header>
+  <div>🚒 R6TBSARI FIRE MDT</div>
+  <div>LIVE CAD SYNC</div>
+</header>
 
-  <div class="content">
+<div class="content">
 
-    <div class="panel" id="callsPage">
-      <h3>ACTIVE CALLS</h3>
-      <div id="activeIncidents"></div>
+  <!-- CALLS -->
+  <div class="panel active" id="callsPage">
+    <h3>ACTIVE CALLS</h3>
+    <div id="activeIncidents"></div>
 
-      <h3>MAP</h3>
-      <div id="map" style="height:300px;"></div>
-    </div>
-
-    <div class="panel" id="unitsPage">
-      <h3>UNITS STATUS</h3>
-      <div id="unitsList"></div>
-    </div>
-
-    <div class="panel" id="chatPage">
-      <h3>UNIT CHAT</h3>
-
-      <div id="chatMessages"></div>
-
-      <input id="chatName" placeholder="Unit Name">
-      <input id="chatInput" placeholder="Message">
-      <button onclick="sendMessage()">SEND</button>
-    </div>
-
+    <h3>MAP</h3>
+    <div id="map" style="height:300px;"></div>
   </div>
+
+  <!-- UNITS -->
+  <div class="panel" id="unitsPage">
+    <h3>UNITS</h3>
+    <div id="unitsList"></div>
+  </div>
+
+  <!-- CHAT -->
+  <div class="panel" id="chatPage">
+    <h3>CHAT</h3>
+
+    <div id="chatMessages"></div>
+
+    <input id="chatName" placeholder="Unit Name">
+    <input id="chatInput" placeholder="Message">
+    <button onclick="sendMessage()">SEND</button>
+  </div>
+
+  <!-- HISTORY -->
+  <div class="panel" id="historyPage">
+    <h3>HISTORY</h3>
+    <div id="historyList"></div>
+  </div>
+
+</div>
 </div>
 
+<!-- DISPATCH -->
 <div class="dispatch">
 
   <div id="adminBox">
     <h3>DISPATCH LOGIN</h3>
-    <input type="password" id="adminPass" placeholder="Password">
+    <input type="password" id="adminPass">
     <button onclick="adminLogin()">LOGIN</button>
   </div>
 
