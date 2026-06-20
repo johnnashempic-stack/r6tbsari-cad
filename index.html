@@ -1,219 +1,112 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <title>R6TBSARI MDT</title>
+  <title>R6TBSARI MDT - DISPATCH CENTER</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#ef4444">
-
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-
   <style>
     * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      font-family: Arial;
-      background: #0a0a0f;
-      color: #ddd;
-      display: flex;
-      height: 100vh;
-      overflow: hidden;
-    }
-
-    .sidebar {
-      width: 180px;
-      background: #111114;
-      border-right: 1px solid #333;
-    }
-
-    .logo {
-      padding: 15px;
-      text-align: center;
-      color: #ef4444;
-      background: #1f1f24;
-      font-weight: bold;
-    }
-
-    .nav-item {
-      padding: 12px;
-      cursor: pointer;
-      color: #bbb;
-    }
-
-    .nav-item:hover {
-      background: #ef4444;
-      color: white;
-    }
-
-    .main {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-    }
-
-    header {
-      background: #1a1a1f;
-      padding: 8px;
-      border-bottom: 3px solid #ef4444;
-      display: flex;
-      justify-content: space-between;
-    }
-
-    .content {
-      flex: 1;
-      display: flex;
-      gap: 10px;
-      padding: 10px;
-    }
-
-    .box {
-      flex: 1;
-      background: #1f1f24;
-      padding: 10px;
-      overflow: auto;
-    }
-
-    .right {
-      width: 220px;
-      background: #111114;
-      padding: 10px;
-      border-left: 1px solid #333;
-    }
-
-    button {
-      width: 100%;
-      margin-top: 5px;
-      padding: 8px;
-      background: #ef4444;
-      border: none;
-      color: white;
-    }
-
-    input, textarea, select {
-      width: 100%;
-      margin-top: 5px;
-      padding: 6px;
-      background: #111;
-      color: white;
-      border: 1px solid #333;
-    }
-
-    #incidentPanel {
-      display: none;
-      margin-top: 10px;
-      border: 1px solid #333;
-      padding: 10px;
-    }
+    body { margin:0; font-family:Arial; background:#0a0a0f; color:#ddd; display:flex; height:100vh; overflow:hidden; }
+    .sidebar { width:190px; background:#111114; border-right:1px solid #333; padding:10px; overflow-y:auto; }
+    .logo { padding:15px; text-align:center; background:#1f1f24; font-weight:bold; color:#ef4444; }
+    .nav-item { padding:12px; cursor:pointer; color:#bbb; margin:4px 0; border-radius:4px; }
+    .nav-item:hover, .nav-item.active { background:#ef4444; color:white; }
+    .main { flex:1; display:flex; flex-direction:column; }
+    header { background:#1a1a1f; padding:10px 15px; display:flex; justify-content:space-between; border-bottom:3px solid #ef4444; }
+    .content { flex:1; padding:12px; overflow-y:auto; display:flex; gap:12px; }
+    .box { background:#1f1f24; border:1px solid #444; border-radius:6px; padding:12px; flex:1; }
+    button, select, input, textarea { width:100%; padding:10px; margin:6px 0; background:#222; color:white; border:1px solid #444; border-radius:4px; }
+    button { background:#ef4444; cursor:pointer; font-weight:bold; }
+    .panel { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.95); z-index:1000; padding:20px; }
+    .panel-content { background:#1f1f24; max-width:600px; margin:40px auto; padding:20px; border-radius:8px; }
   </style>
 </head>
-
 <body>
 
-<!-- SIDEBAR -->
 <div class="sidebar">
-  <div class="logo">MDT SYSTEM</div>
-
-  <div class="nav-item">CALLS</div>
+  <div class="logo">R6TBSARI MDT</div>
+  <div class="nav-item active">CALLS</div>
   <div class="nav-item" onclick="toggleUnits()">UNITS</div>
-  <div class="nav-item">HISTORY</div>
   <div class="nav-item" onclick="toggleChat()">UNIT CHAT</div>
+  <div class="nav-item">HISTORY</div>
+</div>
 
-  <!-- UNITS -->
-  <div id="unitsPanel" style="display:none; padding:10px;">
-    <h4>UNIT CONTROL</h4>
+<div class="main">
+  <header>
+    <div><strong>🚨 R6TBSARI DISPATCH CENTER</strong></div>
+    <div style="color:#22c55e;">REAL-TIME SYNC</div>
+  </header>
 
-    <select id="unitSelect">
+  <div class="content">
+    <div class="box">
+      <h3>ACTIVE CALLS</h3>
+      <div id="activeIncidents"></div>
+    </div>
+
+    <div class="box">
+      <h3>🗺️ MAP - ILOILO</h3>
+      <div id="map" style="height:380px; border:1px solid #444; border-radius:6px;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- RIGHT PANEL -->
+<div style="width:260px; background:#111114; padding:12px; border-left:1px solid #333;">
+  <div id="adminBox">
+    <h3>DISPATCH LOGIN</h3>
+    <input type="password" id="adminPass" placeholder="Password">
+    <button onclick="adminLogin()">LOGIN</button>
+  </div>
+
+  <div id="dispatchControls" style="display:none;">
+    <h3>NEW CALL</h3>
+    <select id="callType">
+      <option value="Structure Fire">🔥 Structure Fire</option>
+      <option value="Medical Emergency">🚑 Medical</option>
+      <option value="MVA">🚗 Vehicle Accident</option>
+      <option value="Rescue">🛟 Rescue</option>
+    </select>
+    <input id="address" placeholder="Address">
+    <textarea id="details" rows="3" placeholder="Details"></textarea>
+    <button onclick="newCall()">🚨 DISPATCH CALL</button>
+    <button onclick="logoutAdmin()">LOGOUT</button>
+  </div>
+</div>
+
+<!-- UNITS PANEL -->
+<div id="unitsPanel" class="panel">
+  <div class="panel-content">
+    <h2>UNIT STATUS CONTROL</h2>
+    <div id="unitControlList"></div>
+    <button onclick="toggleUnits()">CLOSE</button>
+  </div>
+</div>
+
+<!-- CHAT PANEL -->
+<div id="chatPanel" class="panel">
+  <div class="panel-content">
+    <h2>UNIT CHAT</h2>
+    <select id="chatUnit">
       <option>RESCUE 1</option>
       <option>RESCUE 2</option>
       <option>RESCUE 3</option>
       <option>RESCUE 4</option>
       <option>RESCUE 5</option>
     </select>
-
-    <button onclick="setStatus('available')">AVAILABLE</button>
-    <button onclick="setStatus('responding')">RESPONDING</button>
-    <button onclick="setStatus('onscene')">ON SCENE</button>
-    <button onclick="setStatus('busy')">BUSY</button>
-  </div>
-
-  <!-- CHAT -->
-  <div id="chatPanel" style="display:none; padding:10px;">
-    <h4>UNIT CHAT</h4>
-
-    <select id="chatUnit">
-      <option>RESCUE 1</option>
-      <option>RESCUE 2</option>
-      <option>RESCUE 3</option>
-    </select>
-
-    <textarea id="msg"></textarea>
-    <button onclick="sendMsg()">SEND</button>
-    <div id="log"></div>
+    <textarea id="msg" rows="3" placeholder="Type message..."></textarea>
+    <button onclick="sendMsg()">SEND MESSAGE</button>
+    <div id="chatLog" style="height:300px; overflow-y:auto; background:#111; padding:10px; margin-top:10px;"></div>
+    <button onclick="toggleChat()">CLOSE CHAT</button>
   </div>
 </div>
 
-<!-- MAIN -->
-<div class="main">
-  <header>
-    <div><b>DISPATCH CENTER</b></div>
-    <div id="status">OFFLINE</div>
-  </header>
-
-  <div class="content">
-
-    <div class="box">
-      <h3>ACTIVE CALLS</h3>
-      <div id="activeIncidents"></div>
-
-      <div id="incidentPanel">
-        <h3>INCIDENT</h3>
-        <div id="incTime"></div>
-        <div id="incAddress"></div>
-        <div id="incDesc"></div>
-
-        <h4>RESPONDING</h4>
-        <div id="respList"></div>
-
-        <button onclick="closeIncident()">CLOSE</button>
-      </div>
-    </div>
-
-    <div class="box">
-      <h3>MAP</h3>
-      <div id="map" style="height:300px;"></div>
-    </div>
-
-  </div>
-</div>
-
-<!-- RIGHT -->
-<div class="right">
-
-  <!-- ADMIN LOGIN -->
-  <div id="adminBox">
-    <h3>DISPATCH LOGIN</h3>
-    <input type="password" id="adminPass">
-    <button onclick="adminLogin()">LOGIN</button>
-  </div>
-
-  <!-- DISPATCH -->
-  <div id="dispatchControls" style="display:none;">
-    <h3>DISPATCH</h3>
-    <button onclick="newCall()">NEW CALL</button>
-    <button onclick="logoutAdmin()">LOGOUT</button>
-
-    <hr>
-
-    <div>Available: <span id="avail">5</span></div>
-    <div>Responding: <span id="resp">0</span></div>
-  </div>
-
-</div>
+<audio id="alarmSound" preload="auto">
+  <source src="https://freesound.org/data/previews/66/66930_931655-lq.mp3" type="audio/mpeg">
+</audio>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="app.js"></script>
-
 </body>
 </html>
