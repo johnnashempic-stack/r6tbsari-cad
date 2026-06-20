@@ -1,14 +1,14 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MOBILE DATA TERMINAL</title>
+<title>MDT CAD v8</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
 <style>
-body {
+body{
   margin:0;
   font-family:Arial;
   background:#0b0c10;
@@ -17,43 +17,43 @@ body {
   height:100vh;
 }
 
-.sidebar {
+.sidebar{
   width:210px;
   background:#111319;
   padding:10px;
   border-right:1px solid #2a2a2a;
 }
 
-.nav {
+.nav{
   padding:10px;
   margin:6px 0;
   background:#161820;
   cursor:pointer;
 }
 
-.main {
+.main{
   flex:1;
   display:grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns:2fr 1fr;
   gap:10px;
   padding:10px;
 }
 
-.panel {
+.panel{
   background:#14161d;
   border:1px solid #2b2b2b;
   padding:10px;
   overflow:auto;
 }
 
-.card {
+.card{
   background:#10121a;
   border-left:4px solid #e63946;
   padding:10px;
   margin:8px 0;
 }
 
-.right {
+.right{
   width:260px;
   background:#111319;
   padding:10px;
@@ -66,6 +66,7 @@ input,textarea,select,button{
   padding:8px;
   background:#1a1c24;
   color:#fff;
+  border:1px solid #333;
 }
 
 button{
@@ -73,8 +74,8 @@ button{
   cursor:pointer;
 }
 
-#map {
-  height:200px;
+#map{
+  height:220px;
   margin-top:10px;
 }
 </style>
@@ -83,16 +84,18 @@ button{
 <body>
 
 <div class="sidebar">
-  <h3>MDT</h3>
+  <h3>🚒 MDT CAD</h3>
   <div class="nav" onclick="view('calls')">CALLS</div>
   <div class="nav" onclick="view('units')">UNITS</div>
   <div class="nav" onclick="view('chat')">CHAT</div>
 </div>
 
 <div class="main">
+
   <div class="panel" id="callsPanel"></div>
   <div class="panel" id="unitsPanel" style="display:none"></div>
   <div class="panel" id="chatPanel" style="display:none"></div>
+
 </div>
 
 <div class="right">
@@ -109,7 +112,7 @@ button{
       <option>🔥 Fire</option>
       <option>🚑 Medical</option>
       <option>🛟 Rescue</option>
-      <option>🚗 VA</option>
+      <option>🚗 MVA</option>
     </select>
 
     <input id="address" placeholder="Address">
@@ -120,10 +123,11 @@ button{
   </div>
 
   <div id="map"></div>
+
 </div>
 
 <audio id="alarm">
-<source src="https://freesound.org/data/previews/522/522459_11552799-lq.mp3">
+  <source src="https://freesound.org/data/previews/522/522459_11552799-lq.mp3">
 </audio>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
