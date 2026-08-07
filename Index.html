@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#F97316">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Rsix Tigers Brigade | Iloilo</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        :root {
+            --orange: #F97316;
+            --dark-orange: #EA580C;
+            --black: #0A0A0A;
+            --card: #141414;
+            --muted: #A3A3A3;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--black);
+            color: #fff;
+            overflow-x: hidden;
+            padding-bottom: 72px;
+        }
+        .header {
+            background: linear-gradient(135deg, var(--orange), var(--dark-orange));
+            padding: 10px 14px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 12px rgba(249,115,22,0.35);
+        }
+        .header-top { display: flex; justify-content: space-between; align-items: center; }
+        .logo-area { display: flex; align-items: center; gap: 10px; }
+        .logo-circle {
+            width: 48px; height: 48px; background: #000; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            border: 3px solid #fff; font-weight: 900; font-size: 10px;
+            color: var(--orange); text-align: center; line-height: 1.15;
+        }
+        .brand-text h1 { font-size: 14px; color: #000; font-weight: 900; }
+        .brand-text p { font-size: 11px; color: #222; font-weight: 600; }
+        .clock-box { text-align: right; color: #000; font-weight: 800; }
+        .clock-box .time { font-size: 16px; font-variant-numeric: tabular-nums; }
+        .clock-box .date { font-size: 10px; }
+        .role-bar {
+            background: #111; padding: 6px 14px; font-size: 12px;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid #333;
+        }
+        .category-tabs { display: flex; background: #111; border-bottom: 2px solid #333; }
+        .cat-tab {
+            flex: 1; text-align: center; padding: 11px; font-weight: 700;
+            font-size: 13px; cursor: pointer; color: var(--muted);
+            border-bottom: 3px solid transparent;
+        }
+        .cat-tab.active { color: var(--orange); border-bottom-color: var(--orange); }
+        .content { padding: 12px; min-height: calc(100vh - 200px); }
+        .alert-card {
+            background: var(--card); border-radius: 12px; margin-bottom: 12px;
+            overflow: hidden; position: relative; border-left: 5px solid var(--orange);
+        }
+        .alert-card.false-alarm { border-left-color: #6B7280; }
+        .alert-card.verification { border-left-color: #F59E0B; }
+        .alert-card.positive { border-left-color: #EF4444; }
+        .alert-card.under-control { border-left-color: #10B981; }
+        .alert-card.fire-out { border-left-color: #22C55E; opacity: 0.85; }
+        .alert-badge {
+            position: absolute; top: 0; right: 0; background: var(--orange); color: #000;
+            font-size: 11px; font-weight: 800; padding: 4px 12px; border-bottom-left-radius: 10px;
+        }
+        .alert-body { padding: 16px; padding-top: 26px; }
+        .alert-body h3 { font-size: 15px; margin-bottom: 5px; color: var(--orange); }
+        .alert-body p { font-size: 13px; line-height: 1.4; opacity: 0.9; }
+        .alert-time {
+            background: rgba(249,115,22,0.15); color: var(--orange);
+            display: inline-block; padding: 3px 10px; border-radius: 20px;
+            font-size: 11px; margin-top: 8px; font-weight: 600;
+        }
+        .empty-state { text-align: center; padding: 50px 16px; color: var(--muted); }
+        .empty-state .icon { font-size: 48px; margin-bottom: 10px; }
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--orange); }
+        .form-group select, .form-group input, .form-group textarea {
+            width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #333;
+            background: #111; color: #fff; font-size: 14px;
+        }
+        .form-group textarea { min-height: 80px; resize: vertical; }
+        #report-map { height: 220px; border-radius: 10px; margin: 10px 0; border: 2px solid #333; }
+        .btn-primary {
+            width: 100%; background: var(--orange); color: #000; border: none;
+            padding: 14px; border-radius: 10px; font-weight: 800; font-size: 15px; cursor: pointer; margin-top: 8px;
+        }
+        .btn-secondary {
+            width: 100%; background: #333; color: #fff; border: none;
+            padding: 12px; border-radius: 10px; font-weight: 700; font-size: 14px; cursor: pointer; margin-top: 8px;
+        }
+        .hub-grid { display: flex; flex-direction: column; gap: 10px; }
+        .hub-item {
+            background: var(--card); border-radius: 12px; padding: 16px;
+            display: flex; align-items: center; gap: 14px; cursor: pointer; border: 1px solid #333;
+        }
+        .hub-item:hover { border-color: var(--orange); }
+        .hub-icon {
+            width: 46px; height: 46px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px; background: #222;
+        }
+        .settings-card {
+            background: var(--card); border-radius: 12px; padding: 16px;
+            margin-bottom: 12px; border: 1px solid #333;
+        }
+        .tone-option {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 10px 0; border-bottom: 1px solid #222;
+        }
+        .tone-option:last-child { border-bottom: none; }
+        .bottom-nav {
+            position: fixed; bottom: 0; left: 0; right: 0; background: #111;
+            display: flex; justify-content: space-around; padding: 8px 0 14px;
+            z-index: 200; border-top: 2px solid var(--orange);
+        }
+        .nav-item {
+            display: flex; flex-direction: column; align-items: center;
+            color: var(--muted); font-size: 11px; font-weight: 600; cursor: pointer;
+        }
+        .nav-item.active { color: var(--orange); }
+        .nav-item span { font-size: 20px; margin-bottom: 2px; }
+        .dispatcher-bar {
+            background: #1C1917; padding: 8px; display: none; flex-wrap: wrap;
+            gap: 6px; justify-content: center; border-bottom: 2px solid var(--orange);
+        }
+        .dispatcher-bar.show { display: flex; }
+        .dispatcher-bar button {
+            background: var(--orange); color: #000; border: none;
+            padding: 9px 12px; border-radius: 8px; font-weight: 800; font-size: 12px; cursor: pointer;
+        }
+        .modal {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92);
+            z-index: 1000; justify-content: center; align-items: center;
+        }
+        .modal.show { display: flex; }
+        .modal-content {
+            background: #1A1A1A; padding: 24px; border-radius: 16px;
+            width: 90%; max-width: 360px; text-align: center; border: 2px solid var(--orange);
+        }
+        .modal-content input {
+            width: 100%; padding: 12px; margin: 8px 0; border: 2px solid #333;
+            border-radius: 8px; background: #0A0A0A; color: #fff; font-size: 15px;
+        }
+        .modal-content button {
+            background: var(--orange); color: #000; border: none;
+            padding: 11px 22px; border-radius: 8px; font-weight: 800; margin: 6px 4px; cursor: pointer;
+        }
+        .toast {
+            position: fixed; top: 90px; left: 50%; transform: translateX(-50%);
+            background: var(--orange); color: #000; padding: 12px 18px; border-radius: 10px;
+            font-weight: 800; z-index: 999; display: none; max-width: 90%; text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        .toast.show { display: block; }
+        .section { display: none; }
+        .section.active { display: block; }
+        .page-title { font-size: 17px; margin-bottom: 12px; color: var(--orange); text-align: center; font-weight: 800; }
+        #map, #hub-map { height: 340px; border-radius: 12px; margin-bottom: 12px; border: 2px solid #333; }
+        .map-legend { background: var(--card); border-radius: 10px; padding: 12px; font-size: 12px; border: 1px solid #333; }
+        .legend-item { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+        .legend-dot { width: 11px; height: 11px; border-radius: 50%; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-top">
+            <div class="logo-area">
+                <div class="logo-circle">RSIX<br>TIGERS</div>
+                <div class="brand-text">
+                    <h1>RSIX TIGERS BRIGADE</h1>
+                    <p>Iloilo Volunteer Fire & Rescue</p>
+                </div>
+            </div>
+            <div class="clock-box">
+                <div class="time" id="live-clock">--:--:--</div>
+                <div class="date" id="live-date">---</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="role-bar">
+        <span id="role-indicator">Field Unit Mode</span>
+        <div>
+            <button onclick="showLogin()" id="login-btn" style="background:var(--orange);color:#000;border:none;padding:5px 11px;border-radius:6px;font-size:11px;font-weight:800;">Dispatcher Login</button>
+            <button onclick="logout()" id="logout-btn" style="display:none;background:#DC2626;color:#fff;border:none;padding:5px 11px;border-radius:6px;font-size:11px;font-weight:800;">Logout</button>
+        </div>
+    </div>
+    
+    <div class="dispatcher-bar" id="dispatcher-bar">
+        <button onclick="createNewAlert()">🚨 New Alert</button>
+        <button onclick="assignUnit()">📋 Assign Unit</button>
+        <button onclick="markFireOut()">✅ Fire Out</button>
+        <button onclick="syncFromJsonBin()">🔄 Sync Now</button>
+    </div>
+    
+    <div class="toast" id="toast"></div>
+    
+    <div class="content">
+        <!-- HOME -->
+        <div class="section active" id="home-section">
+            <div class="category-tabs">
+                <div class="cat-tab active" id="tab-active" onclick="switchCategory('active')">🔥 ACTIVE</div>
+                <div class="cat-tab" id="tab-history" onclick="switchCategory('history')">📜 HISTORY</div>
+            </div>
+            <div id="alerts-list" style="margin-top:12px;"></div>
+        </div>
+        
+        <!-- REPORT -->
+        <div class="section" id="report-section">
+            <h2 class="page-title">📢 Report a Fire</h2>
+            <div class="form-group">
+                <label>Type of Fire / Incident</label>
+                <select id="report-type">
+                    <option value="Structure Fire">Structure Fire</option>
+                    <option value="Grass / Brush Fire">Grass / Brush Fire</option>
+                    <option value="Vehicle Fire">Vehicle Fire</option>
+                    <option value="Electrical Fire">Electrical Fire</option>
+                    <option value="Smoke Investigation">Smoke Investigation</option>
+                    <option value="False Alarm">False Alarm / False Call</option>
+                    <option value="Other">Other Emergency</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Location / Barangay (Iloilo)</label>
+                <input type="text" id="report-location" placeholder="e.g. Barangay Mandurriao, Iloilo City">
+            </div>
+            <div class="form-group">
+                <label>Additional Details</label>
+                <textarea id="report-details" placeholder="Describe what you see, landmarks, etc."></textarea>
+            </div>
+            <div class="form-group">
+                <label>Pin Location on Map (tap to set)</label>
+                <div id="report-map"></div>
+                <p style="font-size:11px;color:var(--muted);margin-top:4px;" id="report-coords">Tap map to set exact location</p>
+            </div>
+            <button class="btn-primary" onclick="submitReport()">🚨 Submit Fire Report</button>
+            <button class="btn-secondary" onclick="useMyLocation()">📍 Use My Current GPS</button>
+        </div>
+        
+        <!-- HUB -->
+        <div class="section" id="hub-section">
+            <h2 class="page-title">🔥 RSIX TIGERS Hub</h2>
+            <div class="hub-grid">
+                <div class="hub-item" onclick="showHubMap('active')">
+                    <div class="hub-icon">🗺️</div>
+                    <div>
+                        <strong>Active Fire Map</strong>
+                        <p style="font-size:12px;opacity:0.7">Live incidents in Iloilo</p>
+                    </div>
+                </div>
+                <div class="hub-item" onclick="showHubMap('hydrant')">
+                    <div class="hub-icon">🚒</div>
+                    <div>
+                        <strong>Fire Hydrant Map</strong>
+                        <p style="font-size:12px;opacity:0.7">Hydrants in the area</p>
+                    </div>
+                </div>
+                <div class="hub-item" onclick="showBloodBuddy()">
+                    <div class="hub-icon">🩸</div>
+                    <div>
+                        <strong>Blood Buddy</strong>
+                        <p style="font-size:12px;opacity:0.7">Find blood donors</p>
+                    </div>
+                </div>
+            </div>
+            <div id="hub-map-container" style="display:none;margin-top:16px;">
+                <div id="hub-map"></div>
+                <div class="map-legend" id="hub-legend"></div>
+            </div>
+            <div id="blood-buddy" style="display:none;margin-top:16px;">
+                <div class="settings-card">
+                    <h3 style="color:var(--orange);margin-bottom:10px;">🩸 Blood Buddy - Iloilo</h3>
+                    <p style="font-size:13px;margin-bottom:12px;">Coordinate with local blood donors and hospitals.</p>
+                    <p style="font-size:13px;"><strong>Hotline:</strong> (simulation) 0917-XXX-XXXX</p>
+                    <p style="font-size:12px;opacity:0.7;margin-top:8px;">Training feature only.</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- SETTINGS -->
+        <div class="section" id="settings-section">
+            <h2 class="page-title">⚙️ Settings</h2>
+            <div class="settings-card">
+                <h3 style="color:var(--orange);margin-bottom:10px;">Notification Tones (FD Radio Style)</h3>
+                <p style="font-size:12px;opacity:0.7;margin-bottom:12px;">Tone played when a new fire alert arrives</p>
+                <div class="tone-option">
+                    <span>🚨 Classic Fire Tone</span>
+                    <input type="radio" name="tone" value="classic" checked onchange="setTone('classic')">
+                </div>
+                <div class="tone-option">
+                    <span>📢 Dispatch Alert</span>
+                    <input type="radio" name="tone" value="dispatch" onchange="setTone('dispatch')">
+                </div>
+                <div class="tone-option">
+                    <span>🔔 Simple Beep</span>
+                    <input type="radio" name="tone" value="beep" onchange="setTone('beep')">
+                </div>
+                <div class="tone-option">
+                    <span>📻 Radio Squawk</span>
+                    <input type="radio" name="tone" value="radio" onchange="setTone('radio')">
+                </div>
+                <button class="btn-secondary" style="margin-top:12px;" onclick="previewTone()">▶️ Preview Selected Tone</button>
+            </div>
+            <div class="settings-card">
+                <h3 style="color:var(--orange);margin-bottom:10px;">Push Notifications</h3>
+                <button id="enable-push-btn" class="btn-primary" onclick="enablePush()">Enable Notifications</button>
+                <p style="font-size:12px;opacity:0.6;margin-top:8px;" id="push-status">Status: Not enabled</p>
+            </div>
+            <div class="settings-card">
+                <h3 style="color:var(--orange);margin-bottom:10px;">JSONBin Realtime Sync</h3>
+                <p style="font-size:12px;opacity:0.7;margin-bottom:8px;">Enter your JSONBin Bin ID + Master Key. Sync is near-realtime (a few seconds delay is normal on free plan).</p>
+                <input type="text" id="jsonbin-id" placeholder="Bin ID" style="width:100%;padding:10px;margin-bottom:8px;border-radius:8px;border:1px solid #333;background:#111;color:#fff;">
+                <input type="password" id="jsonbin-key" placeholder="X-Master-Key" style="width:100%;padding:10px;margin-bottom:8px;border-radius:8px;border:1px solid #333;background:#111;color:#fff;">
+                <button class="btn-secondary" onclick="saveJsonBinConfig()">Save Config</button>
+                <button class="btn-primary" style="margin-top:8px;" onclick="syncFromJsonBin()">🔄 Force Sync Now</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bottom-nav">
+        <div class="nav-item active" onclick="switchTab('home')"><span>🏠</span> Home</div>
+        <div class="nav-item" onclick="switchTab('report')"><span>📢</span> Report</div>
+        <div class="nav-item" onclick="switchTab('hub')"><span>▦</span> Hub</div>
+        <div class="nav-item" onclick="switchTab('settings')"><span>⚙️</span> Settings</div>
+    </div>
+    
+    <div class="modal" id="login-modal">
+        <div class="modal-content">
+            <h2 style="color:var(--orange);margin-bottom:8px;">Dispatcher Login</h2>
+            <p style="font-size:12px;opacity:0.7;margin-bottom:14px;">Rsix Tigers Brigade • Iloilo</p>
+            <input type="text" id="username" placeholder="Username" value="admin">
+            <input type="password" id="password" placeholder="Password">
+            <div>
+                <button onclick="attemptLogin()">Login</button>
+                <button onclick="hideLogin()" style="background:#333;color:#fff;">Cancel</button>
+            </div>
+            <p style="font-size:11px;opacity:0.5;margin-top:10px;">Demo: admin / tigers123</p>
+        </div>
+    </div>
+    
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="app.js"></script>
+</body>
+  </html>
