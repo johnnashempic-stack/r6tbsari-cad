@@ -76,11 +76,6 @@
         .alert-body { padding: 16px; padding-top: 26px; }
         .alert-body h3 { font-size: 15px; margin-bottom: 5px; color: var(--orange); }
         .alert-body p { font-size: 13px; line-height: 1.4; opacity: 0.9; }
-        .alert-time {
-            background: rgba(249,115,22,0.15); color: var(--orange);
-            display: inline-block; padding: 3px 10px; border-radius: 20px;
-            font-size: 11px; margin-top: 8px; font-weight: 600;
-        }
         .empty-state { text-align: center; padding: 50px 16px; color: var(--muted); }
         .empty-state .icon { font-size: 48px; margin-bottom: 10px; }
         .form-group { margin-bottom: 14px; }
@@ -166,10 +161,8 @@
         .section { display: none; }
         .section.active { display: block; }
         .page-title { font-size: 17px; margin-bottom: 12px; color: var(--orange); text-align: center; font-weight: 800; }
-        #map, #hub-map { height: 340px; border-radius: 12px; margin-bottom: 12px; border: 2px solid #333; }
+        #hub-map { height: 340px; border-radius: 12px; margin-bottom: 12px; border: 2px solid #333; }
         .map-legend { background: var(--card); border-radius: 10px; padding: 12px; font-size: 12px; border: 1px solid #333; }
-        .legend-item { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
-        .legend-dot { width: 11px; height: 11px; border-radius: 50%; }
     </style>
 </head>
 <body>
@@ -256,35 +249,20 @@
                     <div class="hub-icon">🗺️</div>
                     <div>
                         <strong>Active Fire Map</strong>
-                        <p style="font-size:12px;opacity:0.7">Live incidents in Iloilo</p>
+                        <p style="font-size:12px;opacity:0.7">Live incidents in Iloilo (fires only)</p>
                     </div>
                 </div>
                 <div class="hub-item" onclick="showHubMap('hydrant')">
                     <div class="hub-icon">🚒</div>
                     <div>
                         <strong>Fire Hydrant Map</strong>
-                        <p style="font-size:12px;opacity:0.7">Hydrants in the area</p>
-                    </div>
-                </div>
-                <div class="hub-item" onclick="showBloodBuddy()">
-                    <div class="hub-icon">🩸</div>
-                    <div>
-                        <strong>Blood Buddy</strong>
-                        <p style="font-size:12px;opacity:0.7">Find blood donors</p>
+                        <p style="font-size:12px;opacity:0.7">Hydrants in the area (TXTFIRE style)</p>
                     </div>
                 </div>
             </div>
             <div id="hub-map-container" style="display:none;margin-top:16px;">
                 <div id="hub-map"></div>
                 <div class="map-legend" id="hub-legend"></div>
-            </div>
-            <div id="blood-buddy" style="display:none;margin-top:16px;">
-                <div class="settings-card">
-                    <h3 style="color:var(--orange);margin-bottom:10px;">🩸 Blood Buddy - Iloilo</h3>
-                    <p style="font-size:13px;margin-bottom:12px;">Coordinate with local blood donors and hospitals.</p>
-                    <p style="font-size:13px;"><strong>Hotline:</strong> (simulation) 0917-XXX-XXXX</p>
-                    <p style="font-size:12px;opacity:0.7;margin-top:8px;">Training feature only.</p>
-                </div>
             </div>
         </div>
         
@@ -319,7 +297,7 @@
             </div>
             <div class="settings-card">
                 <h3 style="color:var(--orange);margin-bottom:10px;">JSONBin Realtime Sync</h3>
-                <p style="font-size:12px;opacity:0.7;margin-bottom:8px;">Enter your JSONBin Bin ID + Master Key. Sync is near-realtime (a few seconds delay is normal on free plan).</p>
+                <p style="font-size:12px;opacity:0.7;margin-bottom:8px;">Enter your JSONBin Bin ID + Master Key.</p>
                 <input type="text" id="jsonbin-id" placeholder="Bin ID" style="width:100%;padding:10px;margin-bottom:8px;border-radius:8px;border:1px solid #333;background:#111;color:#fff;">
                 <input type="password" id="jsonbin-key" placeholder="X-Master-Key" style="width:100%;padding:10px;margin-bottom:8px;border-radius:8px;border:1px solid #333;background:#111;color:#fff;">
                 <button class="btn-secondary" onclick="saveJsonBinConfig()">Save Config</button>
@@ -352,4 +330,4 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="app.js"></script>
 </body>
-  </html>
+</html>
