@@ -14,7 +14,7 @@ let selectedTone = 'classic';
 let jsonBinId = localStorage.getItem('rsix_jsonbin_id') || '';
 let jsonBinKey = localStorage.getItem('rsix_jsonbin_key') || '';
 
-// Start empty active. One history example.
+// Start with NO active fires. One history example only.
 let alerts = [
     {
         id: 1,
@@ -39,13 +39,20 @@ let units = [
     { name: 'Rescue 5', status: 'Available', lat: 10.7400, lng: 122.5600 }
 ];
 
-// Sample hydrants around Iloilo
+// Fire hydrants around Iloilo (TXTFIRE-style)
 let hydrants = [
-    { lat: 10.7210, lng: 122.5630, id: 'H-001' },
-    { lat: 10.7180, lng: 122.5580, id: 'H-002' },
-    { lat: 10.7250, lng: 122.5700, id: 'H-003' },
-    { lat: 10.7100, lng: 122.5400, id: 'H-004' },
-    { lat: 10.7350, lng: 122.5550, id: 'H-005' }
+    { lat: 10.7210, lng: 122.5630, id: 'H-001', area: 'City Proper' },
+    { lat: 10.7180, lng: 122.5580, id: 'H-002', area: 'City Proper' },
+    { lat: 10.7250, lng: 122.5700, id: 'H-003', area: 'Jaro' },
+    { lat: 10.7100, lng: 122.5400, id: 'H-004', area: 'Molo' },
+    { lat: 10.7350, lng: 122.5550, id: 'H-005', area: 'La Paz' },
+    { lat: 10.7167, lng: 122.5500, id: 'H-006', area: 'Mandurriao' },
+    { lat: 10.7050, lng: 122.5450, id: 'H-007', area: 'Mandurriao' },
+    { lat: 10.7300, lng: 122.5750, id: 'H-008', area: 'Jaro' },
+    { lat: 10.6900, lng: 122.5300, id: 'H-009', area: 'Arevalo' },
+    { lat: 10.7400, lng: 122.5600, id: 'H-010', area: 'La Paz' },
+    { lat: 10.7120, lng: 122.5650, id: 'H-011', area: 'City Proper' },
+    { lat: 10.7280, lng: 122.5480, id: 'H-012', area: 'Mandurriao' }
 ];
 
 // ========== CLOCK ==========
@@ -105,9 +112,7 @@ function playTone(type) {
             setTimeout(() => { osc.frequency.value = 300; }, 250);
             setTimeout(() => { osc.stop(); ctx.close(); }, 400);
         }
-    } catch (e) {
-        console.log('Audio not available');
-    }
+    } catch (e) {}
 }
 
 function previewTone() {
@@ -180,7 +185,6 @@ async function syncFromJsonBin() {
         }
     } catch (e) {
         showToast('Sync error: ' + e.message);
-        console.error(e);
     }
 }
 
@@ -195,12 +199,9 @@ async function pushToJsonBin() {
             },
             body: JSON.stringify({ alerts: alerts, updated: new Date().toISOString() })
         });
-    } catch (e) {
-        console.log('Push to JSONBin failed', e);
-    }
+    } catch (e) {}
 }
 
-// Auto poll every 12 seconds if configured
 setInterval(() => {
     if (jsonBinId && jsonBinKey) syncFromJsonBin();
 }, 12000);
@@ -247,11 +248,11 @@ function renderAlerts() {
             <div class="alert-badge">${currentCategory === 'active' ? 'FIRE ALERT' : 'HISTORY'}</div>
             <div class="alert-body">
                 <h3>🔥 ${alert.type}</h3>
-                <p><strong>${alert.location}</strong></p>
-                <p>Status: <strong>${alert.status}</strong></p>
+                <p><strong>📍 ${alert.location}</strong></p>
+                <p>Status: <strong style="color:\( {alert.statusClass === 'fire-out' ? '#22C55E' : '#F97316'}"> \){alert.status}</strong></p>
+                <p style="font-size:12px;margin-top:4px;">🕒 ${alert.time}</p>
                 <p style="font-size:12px;">Area: ${alert.area || 'Iloilo'}</p>
                 ${alert.units && alert.units.length ? `<p style="font-size:12px;margin-top:4px;">Units: ${alert.units.join(', ')}</p>` : ''}
-                <div class="alert-time">${alert.time} (ILOILO)</div>
             </div>
         `;
         card.onclick = () => {
@@ -346,9 +347,8 @@ function submitReport() {
     document.getElementById('report-details').value = '';
 }
 
-// ========== HUB MAPS ==========
+// ========== HUB MAPS (NO Rescue units on Active Fire map) ==========
 function showHubMap(mode) {
-    document.getElementById('blood-buddy').style.display = 'none';
     document.getElementById('hub-map-container').style.display = 'block';
 
     setTimeout(() => {
@@ -365,31 +365,56 @@ function showHubMap(mode) {
         const legend = document.getElementById('hub-legend');
 
         if (mode === 'active') {
-            legend.innerHTML = '<strong style="color:var(--orange)">Active Fires - Iloilo</strong>';
-            getActiveAlerts().forEach(a => {
+            // ONLY active fires – NO Rescue units
+            legend.innerHTML = `
+                <strong style="color:var(--orange)">🔥 ACTIVE FIRES - ILOILO</strong><br>
+                <span style="font-size:11px;opacity:0.8">Showing fire locations only</span>
+            `;
+            const active = getActiveAlerts();
+            if (active.length === 0) {
+                legend.innerHTML += '<br><span style="color:#22C55E">No active fires</span>';
+            }
+            active.forEach(a => {
+                const color = a.statusClass === 'verification' ? '#F59E0B' :
+                              a.statusClass === 'under-control' ? '#10B981' :
+                              a.statusClass === 'false-alarm' ? '#6B7280' : '#EF4444';
                 const m = L.circleMarker([a.lat, a.lng], {
-                    color: '#EF4444', fillColor: '#EF4444', fillOpacity: 0.8, radius: 10
+                    color: color, fillColor: color, fillOpacity: 0.85, radius: 12, weight: 3
                 }).addTo(hubMap);
-                m.bindPopup(`<b>\( {a.location}</b><br> \){a.status}<br>${a.type}`);
-            });
-            units.forEach(u => {
-                L.marker([u.lat, u.lng]).addTo(hubMap).bindPopup(`${u.name}: ${u.status}`);
+                m.bindPopup(`
+                    <div style="min-width:180px">
+                        <strong style="color:#F97316;font-size:14px">🔥 ${a.type}</strong><br>
+                        <b>Location:</b> ${a.location}<br>
+                        <b>Status:</b> ${a.status}<br>
+                        <b>Time:</b> ${a.time}<br>
+                        <small>${a.area || 'Iloilo'}</small>
+                    </div>
+                `);
             });
         } else if (mode === 'hydrant') {
-            legend.innerHTML = '<strong style="color:var(--orange)">Fire Hydrants - Iloilo Area</strong>';
+            legend.innerHTML = `
+                <strong style="color:var(--orange)">🚒 FIRE HYDRANTS - ILOILO</strong><br>
+                <span style="font-size:11px;opacity:0.8">Blue markers = Hydrant locations</span>
+            `;
             hydrants.forEach(h => {
                 const m = L.circleMarker([h.lat, h.lng], {
-                    color: '#0EA5E9', fillColor: '#0EA5E9', fillOpacity: 0.9, radius: 8
+                    color: '#0284C7',
+                    fillColor: '#0EA5E9',
+                    fillOpacity: 0.9,
+                    radius: 9,
+                    weight: 2
                 }).addTo(hubMap);
-                m.bindPopup(`Hydrant ${h.id}`);
+                m.bindPopup(`
+                    <div style="min-width:150px">
+                        <strong style="color:#0EA5E9">🚒 Hydrant ${h.id}</strong><br>
+                        Area: ${h.area || 'Iloilo'}<br>
+                        Status: Operational<br>
+                        <small>TXTFIRE-style locator</small>
+                    </div>
+                `);
             });
         }
     }, 150);
-}
-
-function showBloodBuddy() {
-    document.getElementById('hub-map-container').style.display = 'none';
-    document.getElementById('blood-buddy').style.display = 'block';
 }
 
 // ========== NAV ==========
@@ -491,47 +516,4 @@ function markFireOut() {
     if (currentRole !== 'dispatcher') return;
     const active = getActiveAlerts();
     if (!active.length) { showToast('No active fires'); return; }
-    const alertId = prompt('Alert ID to mark Fire Out:', active[active.length-1].id.toString());
-    const alert = alerts.find(a => a.id == alertId);
-    if (alert) {
-        alert.status = 'Fire Out';
-        alert.statusClass = 'fire-out';
-        alert.units.forEach(name => {
-            const u = units.find(x => x.name === name);
-            if (u) u.status = 'Available';
-        });
-        renderAlerts();
-        pushToJsonBin();
-        showToast('✅ Moved to HISTORY');
-        showLocalNotification('Fire Out', alert.location);
-    }
-}
-
-// ========== INIT ==========
-window.onload = function() {
-    document.getElementById('jsonbin-id').value = jsonBinId;
-    document.getElementById('jsonbin-key').value = jsonBinKey;
-    const savedTone = localStorage.getItem('rsix_tone');
-    if (savedTone) {
-        selectedTone = savedTone;
-        const radio = document.querySelector(`input[name="tone"][value="${savedTone}"]`);
-        if (radio) radio.checked = true;
-    }
-
-    renderAlerts();
-    updateClock();
-    setInterval(updateClock, 1000);
-
-    if (Notification.permission === 'granted') {
-        document.getElementById('push-status').textContent = 'Status: ✅ Enabled';
-        document.getElementById('enable-push-btn').textContent = 'Enabled';
-    }
-
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js').catch(()=>{});
-    }
-
-    if (jsonBinId && jsonBinKey) setTimeout(syncFromJsonBin, 1500);
-
-    console.log('Rsix Tigers Brigade Iloilo ready');
-};
+    const alertId = prompt('Alert ID to mark Fire Out:'
