@@ -1,5 +1,5 @@
 const CACHE_NAME = 'rsix-tigers-v1';
-const urlsToCache = ['./', './index.html', './app.js', './manifest.json'];
+const urlsToCache = ['./', './index.html', './app.js', './manifest.json', './logo.png'];
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache)));
