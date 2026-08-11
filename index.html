@@ -6,10 +6,8 @@
     <meta name="theme-color" content="#F97316">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <title>Rsix Tigers Brigade | Iloilo</title>
-    
     <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    
     <style>
         :root {
             --orange: #F97316;
@@ -39,22 +37,6 @@
         .logo-img {
             width: 52px; height: 52px; border-radius: 50%;
             border: 3px solid #fff; object-fit: cover; background: #000;
-        }
-        /* Desktop / Chromebook */
-        @media (min-width: 768px) {
-            .content { max-width: 720px; margin: 0 auto; }
-            .header { padding: 14px 24px; }
-            .brand-text h1 { font-size: 18px; }
-            .brand-text p { font-size: 13px; }
-            .logo-img { width: 60px; height: 60px; }
-            .clock-box .time { font-size: 20px; }
-            #hub-map, #report-map { height: 420px; }
-            .bottom-nav { padding: 10px 0 16px; }
-            .nav-item { font-size: 12px; }
-            .nav-item span { font-size: 22px; }
-        }
-        @media (min-width: 1024px) {
-            .content { max-width: 900px; }
         }
         .brand-text h1 { font-size: 14px; color: #000; font-weight: 900; }
         .brand-text p { font-size: 11px; color: #222; font-weight: 600; }
@@ -177,6 +159,14 @@
         .page-title { font-size: 17px; margin-bottom: 12px; color: var(--orange); text-align: center; font-weight: 800; }
         #hub-map { height: 340px; border-radius: 12px; margin-bottom: 12px; border: 2px solid #333; }
         .map-legend { background: var(--card); border-radius: 10px; padding: 12px; font-size: 12px; border: 1px solid #333; }
+        @media (min-width: 768px) {
+            .content { max-width: 720px; margin: 0 auto; }
+            .header { padding: 14px 24px; }
+            .brand-text h1 { font-size: 18px; }
+            .logo-img { width: 60px; height: 60px; }
+            .clock-box .time { font-size: 20px; }
+            #hub-map, #report-map { height: 420px; }
+        }
     </style>
 </head>
 <body>
@@ -214,7 +204,6 @@
     <div class="toast" id="toast"></div>
     
     <div class="content">
-        <!-- HOME -->
         <div class="section active" id="home-section">
             <div class="category-tabs">
                 <div class="cat-tab active" id="tab-active" onclick="switchCategory('active')">🔥 ACTIVE</div>
@@ -223,7 +212,6 @@
             <div id="alerts-list" style="margin-top:12px;"></div>
         </div>
         
-        <!-- REPORT -->
         <div class="section" id="report-section">
             <h2 class="page-title">📢 Report a Fire</h2>
             <div class="form-group">
@@ -244,18 +232,17 @@
             </div>
             <div class="form-group">
                 <label>Additional Details</label>
-                <textarea id="report-details" placeholder="Describe what you see, landmarks, etc."></textarea>
+                <textarea id="report-details" placeholder="Describe what you see..."></textarea>
             </div>
             <div class="form-group">
-                <label>Pin Location on Map (tap to set)</label>
+                <label>Pin Location on Map</label>
                 <div id="report-map"></div>
-                <p style="font-size:11px;color:var(--muted);margin-top:4px;" id="report-coords">Tap map to set exact location</p>
+                <p style="font-size:11px;color:var(--muted);margin-top:4px;" id="report-coords">Tap map to set location</p>
             </div>
             <button class="btn-primary" onclick="submitReport()">🚨 Submit Fire Report</button>
             <button class="btn-secondary" onclick="useMyLocation()">📍 Use My Current GPS</button>
         </div>
         
-        <!-- HUB -->
         <div class="section" id="hub-section">
             <h2 class="page-title">🔥 RSIX TIGERS Hub</h2>
             <div class="hub-grid">
@@ -263,14 +250,14 @@
                     <div class="hub-icon">🗺️</div>
                     <div>
                         <strong>Active Fire Map</strong>
-                        <p style="font-size:12px;opacity:0.7">Live incidents in Iloilo (fires only)</p>
+                        <p style="font-size:12px;opacity:0.7">Live incidents in Iloilo</p>
                     </div>
                 </div>
                 <div class="hub-item" onclick="showHubMap('hydrant')">
                     <div class="hub-icon">🚒</div>
                     <div>
                         <strong>Fire Hydrant Map</strong>
-                        <p style="font-size:12px;opacity:0.7">Hydrants in the area (TXTFIRE style)</p>
+                        <p style="font-size:12px;opacity:0.7">Hydrants in the area</p>
                     </div>
                 </div>
             </div>
@@ -280,12 +267,10 @@
             </div>
         </div>
         
-        <!-- SETTINGS -->
         <div class="section" id="settings-section">
             <h2 class="page-title">⚙️ Settings</h2>
             <div class="settings-card">
-                <h3 style="color:var(--orange);margin-bottom:10px;">Notification Tones (FD Radio Style)</h3>
-                <p style="font-size:12px;opacity:0.7;margin-bottom:12px;">Tone played when a new fire alert arrives</p>
+                <h3 style="color:var(--orange);margin-bottom:10px;">Notification Tones</h3>
                 <div class="tone-option">
                     <span>🚨 Classic Fire Tone</span>
                     <input type="radio" name="tone" value="classic" checked onchange="setTone('classic')">
@@ -302,7 +287,7 @@
                     <span>📻 Radio Squawk</span>
                     <input type="radio" name="tone" value="radio" onchange="setTone('radio')">
                 </div>
-                <button class="btn-secondary" style="margin-top:12px;" onclick="previewTone()">▶️ Preview Selected Tone</button>
+                <button class="btn-secondary" style="margin-top:12px;" onclick="previewTone()">▶️ Preview Tone</button>
             </div>
             <div class="settings-card">
                 <h3 style="color:var(--orange);margin-bottom:10px;">Push Notifications</h3>
@@ -311,7 +296,7 @@
             </div>
             <div class="settings-card">
                 <h3 style="color:var(--orange);margin-bottom:10px;">JSONBin Realtime Sync</h3>
-                <p style="font-size:12px;opacity:0.7;margin-bottom:8px;">Enter your JSONBin Bin ID + Master Key so all devices see the same alerts.</p>
+                <p style="font-size:12px;opacity:0.7;margin-bottom:8px;">Same Bin ID on all devices = shared alerts</p>
                 <input type="text" id="jsonbin-id" placeholder="Bin ID" style="width:100%;padding:10px;margin-bottom:8px;border-radius:8px;border:1px solid #333;background:#111;color:#fff;">
                 <input type="password" id="jsonbin-key" placeholder="X-Master-Key" style="width:100%;padding:10px;margin-bottom:8px;border-radius:8px;border:1px solid #333;background:#111;color:#fff;">
                 <button class="btn-secondary" onclick="saveJsonBinConfig()">Save Config</button>
