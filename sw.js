@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rsix-tigers-v1';
+const CACHE_NAME = 'rsix-tigers-v3';
 const urlsToCache = ['./', './index.html', './app.js', './manifest.json', './logo.png'];
 
 self.addEventListener('install', event => {
