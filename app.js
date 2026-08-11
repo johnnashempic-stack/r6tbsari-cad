@@ -122,7 +122,7 @@ function showLocalNotification(title, body) {
     if (Notification.permission === 'granted') {
         new Notification(title, {
             body: body,
-            icon: 'https://via.placeholder.com/128/F97316/000000?text=RSIX',
+            icon: 'logo.png',
             tag: 'rsix-alert',
             requireInteraction: true
         });
@@ -516,4 +516,8 @@ function markFireOut() {
         renderAlerts();
         pushToJsonBin();
         showToast('✅ Moved to HISTORY');
-        showLocalNotificat
+        showLocalNotification('Fire Out', alert.location);
+    }
+}
+
+windo
