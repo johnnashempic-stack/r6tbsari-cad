@@ -14,7 +14,6 @@ let selectedTone = 'classic';
 let jsonBinId = localStorage.getItem('rsix_jsonbin_id') || '';
 let jsonBinKey = localStorage.getItem('rsix_jsonbin_key') || '';
 
-// Start with NO active fires. One history example only.
 let alerts = [
     {
         id: 1,
@@ -39,7 +38,6 @@ let units = [
     { name: 'Rescue 5', status: 'Available', lat: 10.7400, lng: 122.5600 }
 ];
 
-// Fire hydrants around Iloilo (TXTFIRE-style)
 let hydrants = [
     { lat: 10.7210, lng: 122.5630, id: 'H-001', area: 'City Proper' },
     { lat: 10.7180, lng: 122.5580, id: 'H-002', area: 'City Proper' },
@@ -55,7 +53,6 @@ let hydrants = [
     { lat: 10.7280, lng: 122.5480, id: 'H-012', area: 'Mandurriao' }
 ];
 
-// ========== CLOCK ==========
 function updateClock() {
     const now = new Date();
     const timeStr = now.toLocaleTimeString('en-PH', { hour12: false, timeZone: 'Asia/Manila' });
@@ -64,7 +61,6 @@ function updateClock() {
     document.getElementById('live-date').textContent = dateStr + ' • ILOILO';
 }
 
-// ========== TOAST & TONES ==========
 function showToast(msg, duration = 3500) {
     const t = document.getElementById('toast');
     t.textContent = msg;
@@ -120,7 +116,6 @@ function previewTone() {
     showToast('Playing: ' + selectedTone);
 }
 
-// ========== NOTIFICATIONS ==========
 function showLocalNotification(title, body) {
     playTone(selectedTone);
     if (!('Notification' in window)) return;
@@ -155,7 +150,6 @@ function enablePush() {
     });
 }
 
-// ========== JSONBIN ==========
 function saveJsonBinConfig() {
     jsonBinId = document.getElementById('jsonbin-id').value.trim();
     jsonBinKey = document.getElementById('jsonbin-key').value.trim();
@@ -179,7 +173,8 @@ async function syncFromJsonBin() {
         if (data && data.record && Array.isArray(data.record.alerts)) {
             alerts = data.record.alerts;
             renderAlerts();
-            showToast('✅ Synced ' + alerts.length + ' alerts');
+            const now = new Date().toLocaleTimeString('en-PH', {hour12: false});
+            showToast('✅ Synced ' + alerts.length + ' alerts • ' + now);
         } else {
             showToast('No alerts array found in bin');
         }
@@ -206,7 +201,6 @@ setInterval(() => {
     if (jsonBinId && jsonBinKey) syncFromJsonBin();
 }, 12000);
 
-// ========== CATEGORY ==========
 function getActiveAlerts() {
     return alerts.filter(a => a.status !== 'Fire Out');
 }
@@ -221,7 +215,6 @@ function switchCategory(cat) {
     renderAlerts();
 }
 
-// ========== RENDER ALERTS ==========
 function renderAlerts() {
     const container = document.getElementById('alerts-list');
     container.innerHTML = '';
@@ -263,7 +256,6 @@ function renderAlerts() {
     });
 }
 
-// ========== REPORT MAP ==========
 function initReportMap() {
     if (reportMap) {
         reportMap.invalidateSize();
@@ -347,7 +339,6 @@ function submitReport() {
     document.getElementById('report-details').value = '';
 }
 
-// ========== HUB MAPS (NO Rescue units on Active Fire map) ==========
 function showHubMap(mode) {
     document.getElementById('hub-map-container').style.display = 'block';
 
@@ -365,7 +356,6 @@ function showHubMap(mode) {
         const legend = document.getElementById('hub-legend');
 
         if (mode === 'active') {
-            // ONLY active fires – NO Rescue units
             legend.innerHTML = `
                 <strong style="color:var(--orange)">🔥 ACTIVE FIRES - ILOILO</strong><br>
                 <span style="font-size:11px;opacity:0.8">Showing fire locations only</span>
@@ -417,7 +407,6 @@ function showHubMap(mode) {
     }, 150);
 }
 
-// ========== NAV ==========
 function switchTab(tab) {
     document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -431,7 +420,6 @@ function switchTab(tab) {
     }
 }
 
-// ========== DISPATCHER ==========
 function showLogin() { document.getElementById('login-modal').classList.add('show'); }
 function hideLogin() { document.getElementById('login-modal').classList.remove('show'); }
 
@@ -516,4 +504,16 @@ function markFireOut() {
     if (currentRole !== 'dispatcher') return;
     const active = getActiveAlerts();
     if (!active.length) { showToast('No active fires'); return; }
-    const alertId = prompt('Alert ID to mark Fire Out:'
+    const alertId = prompt('Alert ID to mark Fire Out:', active[active.length-1].id.toString());
+    const alert = alerts.find(a => a.id == alertId);
+    if (alert) {
+        alert.status = 'Fire Out';
+        alert.statusClass = 'fire-out';
+        alert.units.forEach(name => {
+            const u = units.find(x => x.name === name);
+            if (u) u.status = 'Available';
+        });
+        renderAlerts();
+        pushToJsonBin();
+        showToast('✅ Moved to HISTORY');
+        showLocalNotificat
