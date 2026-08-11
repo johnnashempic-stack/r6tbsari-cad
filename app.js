@@ -1,5 +1,5 @@
 // Rsix Tigers Brigade - Iloilo
-// Full fixed version
+// Clean full version
 
 let currentRole = 'field';
 let currentCategory = 'active';
@@ -51,7 +51,7 @@ let hydrants = [
     { lat: 10.7280, lng: 122.5480, id: 'H-012', area: 'Mandurriao' }
 ];
 
-// ========== CLOCK (FIXED) ==========
+// ========== CLOCK ==========
 function updateClock() {
     try {
         const now = new Date();
@@ -533,4 +533,4 @@ function createNewAlert() {
 function assignUnit() {
     if (currentRole !== 'dispatcher') return;
     const active = getActiveAlerts();
-    if (!active.length) { showToast('No activ
+    if (!active.length) { showToast('No active alerts
