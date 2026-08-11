@@ -36,11 +36,25 @@
         }
         .header-top { display: flex; justify-content: space-between; align-items: center; }
         .logo-area { display: flex; align-items: center; gap: 10px; }
-        .logo-circle {
-            width: 48px; height: 48px; background: #000; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            border: 3px solid #fff; font-weight: 900; font-size: 10px;
-            color: var(--orange); text-align: center; line-height: 1.15;
+        .logo-img {
+            width: 52px; height: 52px; border-radius: 50%;
+            border: 3px solid #fff; object-fit: cover; background: #000;
+        }
+        /* Desktop / Chromebook */
+        @media (min-width: 768px) {
+            .content { max-width: 720px; margin: 0 auto; }
+            .header { padding: 14px 24px; }
+            .brand-text h1 { font-size: 18px; }
+            .brand-text p { font-size: 13px; }
+            .logo-img { width: 60px; height: 60px; }
+            .clock-box .time { font-size: 20px; }
+            #hub-map, #report-map { height: 420px; }
+            .bottom-nav { padding: 10px 0 16px; }
+            .nav-item { font-size: 12px; }
+            .nav-item span { font-size: 22px; }
+        }
+        @media (min-width: 1024px) {
+            .content { max-width: 900px; }
         }
         .brand-text h1 { font-size: 14px; color: #000; font-weight: 900; }
         .brand-text p { font-size: 11px; color: #222; font-weight: 600; }
@@ -169,7 +183,7 @@
     <div class="header">
         <div class="header-top">
             <div class="logo-area">
-                <div class="logo-circle">RSIX<br>TIGERS</div>
+                <img src="logo.png" alt="Rsix Tigers Logo" class="logo-img" onerror="this.src='https://via.placeholder.com/60/000000/F97316?text=RSIX'">
                 <div class="brand-text">
                     <h1>RSIX TIGERS BRIGADE</h1>
                     <p>Iloilo Volunteer Fire & Rescue</p>
@@ -297,7 +311,7 @@
             </div>
             <div class="settings-card">
                 <h3 style="color:var(--orange);margin-bottom:10px;">JSONBin Realtime Sync</h3>
-                <p style="font-size:12px;opacity:0.7;margin-bottom:8px;">Enter your JSONBin Bin ID + Master Key.</p>
+                <p style="font-size:12px;opacity:0.7;margin-bottom:8px;">Enter your JSONBin Bin ID + Master Key so all devices see the same alerts.</p>
                 <input type="text" id="jsonbin-id" placeholder="Bin ID" style="width:100%;padding:10px;margin-bottom:8px;border-radius:8px;border:1px solid #333;background:#111;color:#fff;">
                 <input type="password" id="jsonbin-key" placeholder="X-Master-Key" style="width:100%;padding:10px;margin-bottom:8px;border-radius:8px;border:1px solid #333;background:#111;color:#fff;">
                 <button class="btn-secondary" onclick="saveJsonBinConfig()">Save Config</button>
@@ -330,4 +344,4 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="app.js"></script>
 </body>
-                    </html>
+</html>
