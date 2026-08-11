@@ -1,12 +1,10 @@
 // Rsix Tigers Brigade - Iloilo
-// Orange/Black | Active/History | Report with Map | JSONBin | Realtime Clock | FD Tones
+// Full fixed version
 
 let currentRole = 'field';
 let currentCategory = 'active';
-let map = null;
 let reportMap = null;
 let hubMap = null;
-let markers = [];
 let reportMarker = null;
 let reportLat = 10.7202;
 let reportLng = 122.5621;
@@ -53,21 +51,42 @@ let hydrants = [
     { lat: 10.7280, lng: 122.5480, id: 'H-012', area: 'Mandurriao' }
 ];
 
+// ========== CLOCK (FIXED) ==========
 function updateClock() {
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString('en-PH', { hour12: false, timeZone: 'Asia/Manila' });
-    const dateStr = now.toLocaleDateString('en-PH', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'Asia/Manila' });
-    document.getElementById('live-clock').textContent = timeStr;
-    document.getElementById('live-date').textContent = dateStr + ' • ILOILO';
+    try {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('en-PH', {
+            hour12: false,
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            timeZone: 'Asia/Manila'
+        });
+        const dateStr = now.toLocaleDateString('en-PH', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            timeZone: 'Asia/Manila'
+        });
+        const clockEl = document.getElementById('live-clock');
+        const dateEl = document.getElementById('live-date');
+        if (clockEl) clockEl.textContent = timeStr;
+        if (dateEl) dateEl.textContent = dateStr + ' • ILOILO';
+    } catch (e) {
+        console.log('Clock error:', e);
+    }
 }
 
+// ========== TOAST ==========
 function showToast(msg, duration = 3500) {
     const t = document.getElementById('toast');
+    if (!t) return;
     t.textContent = msg;
     t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), duration);
 }
 
+// ========== TONES ==========
 function setTone(tone) {
     selectedTone = tone;
     localStorage.setItem('rsix_tone', tone);
@@ -116,6 +135,7 @@ function previewTone() {
     showToast('Playing: ' + selectedTone);
 }
 
+// ========== NOTIFICATIONS ==========
 function showLocalNotification(title, body) {
     playTone(selectedTone);
     if (!('Notification' in window)) return;
@@ -140,16 +160,19 @@ function enablePush() {
         const status = document.getElementById('push-status');
         const btn = document.getElementById('enable-push-btn');
         if (p === 'granted') {
-            status.textContent = 'Status: ✅ Enabled';
-            btn.textContent = 'Enabled';
+            if (status) status.textContent = 'Status: ✅ Enabled';
+            if (btn) btn.textContent = 'Enabled';
             showToast('Notifications Enabled');
-            if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('sw.js').catch(() => {});
+            }
         } else {
-            status.textContent = 'Status: ❌ Denied';
+            if (status) status.textContent = 'Status: ❌ Denied';
         }
     });
 }
 
+// ========== JSONBIN ==========
 function saveJsonBinConfig() {
     jsonBinId = document.getElementById('jsonbin-id').value.trim();
     jsonBinKey = document.getElementById('jsonbin-key').value.trim();
@@ -164,7 +187,7 @@ async function syncFromJsonBin() {
         return;
     }
     try {
-        showToast('Syncing from JSONBin...');
+        showToast('Syncing...');
         const res = await fetch(`https://api.jsonbin.io/v3/b/${jsonBinId}/latest`, {
             headers: { 'X-Master-Key': jsonBinKey }
         });
@@ -173,10 +196,10 @@ async function syncFromJsonBin() {
         if (data && data.record && Array.isArray(data.record.alerts)) {
             alerts = data.record.alerts;
             renderAlerts();
-            const now = new Date().toLocaleTimeString('en-PH', {hour12: false});
+            const now = new Date().toLocaleTimeString('en-PH', { hour12: false });
             showToast('✅ Synced ' + alerts.length + ' alerts • ' + now);
         } else {
-            showToast('No alerts array found in bin');
+            showToast('No alerts found in bin');
         }
     } catch (e) {
         showToast('Sync error: ' + e.message);
@@ -201,6 +224,7 @@ setInterval(() => {
     if (jsonBinId && jsonBinKey) syncFromJsonBin();
 }, 12000);
 
+// ========== CATEGORY ==========
 function getActiveAlerts() {
     return alerts.filter(a => a.status !== 'Fire Out');
 }
@@ -210,13 +234,17 @@ function getHistoryAlerts() {
 
 function switchCategory(cat) {
     currentCategory = cat;
-    document.getElementById('tab-active').classList.toggle('active', cat === 'active');
-    document.getElementById('tab-history').classList.toggle('active', cat === 'history');
+    const tabActive = document.getElementById('tab-active');
+    const tabHistory = document.getElementById('tab-history');
+    if (tabActive) tabActive.classList.toggle('active', cat === 'active');
+    if (tabHistory) tabHistory.classList.toggle('active', cat === 'history');
     renderAlerts();
 }
 
+// ========== RENDER ALERTS ==========
 function renderAlerts() {
     const container = document.getElementById('alerts-list');
+    if (!container) return;
     container.innerHTML = '';
     const list = currentCategory === 'active' ? getActiveAlerts() : getHistoryAlerts();
 
@@ -236,7 +264,7 @@ function renderAlerts() {
 
     list.slice().reverse().forEach(alert => {
         const card = document.createElement('div');
-        card.className = `alert-card ${alert.statusClass}`;
+        card.className = `alert-card ${alert.statusClass || ''}`;
         card.innerHTML = `
             <div class="alert-badge">${currentCategory === 'active' ? 'FIRE ALERT' : 'HISTORY'}</div>
             <div class="alert-body">
@@ -256,11 +284,15 @@ function renderAlerts() {
     });
 }
 
+// ========== REPORT MAP ==========
 function initReportMap() {
     if (reportMap) {
         reportMap.invalidateSize();
         return;
     }
+    const el = document.getElementById('report-map');
+    if (!el) return;
+
     reportMap = L.map('report-map').setView([10.7202, 122.5621], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OSM | Rsix Tigers'
@@ -271,16 +303,16 @@ function initReportMap() {
         const pos = e.target.getLatLng();
         reportLat = pos.lat;
         reportLng = pos.lng;
-        document.getElementById('report-coords').textContent = 
-            `Lat: ${reportLat.toFixed(5)}, Lng: ${reportLng.toFixed(5)}`;
+        const coords = document.getElementById('report-coords');
+        if (coords) coords.textContent = `Lat: ${reportLat.toFixed(5)}, Lng: ${reportLng.toFixed(5)}`;
     });
 
     reportMap.on('click', e => {
         reportLat = e.latlng.lat;
         reportLng = e.latlng.lng;
         reportMarker.setLatLng(e.latlng);
-        document.getElementById('report-coords').textContent = 
-            `Lat: ${reportLat.toFixed(5)}, Lng: ${reportLng.toFixed(5)}`;
+        const coords = document.getElementById('report-coords');
+        if (coords) coords.textContent = `Lat: ${reportLat.toFixed(5)}, Lng: ${reportLng.toFixed(5)}`;
     });
 }
 
@@ -296,8 +328,8 @@ function useMyLocation() {
             reportMap.setView([reportLat, reportLng], 16);
             reportMarker.setLatLng([reportLat, reportLng]);
         }
-        document.getElementById('report-coords').textContent = 
-            `GPS: ${reportLat.toFixed(5)}, ${reportLng.toFixed(5)}`;
+        const coords = document.getElementById('report-coords');
+        if (coords) coords.textContent = `GPS: ${reportLat.toFixed(5)}, ${reportLng.toFixed(5)}`;
         showToast('📍 Location set from GPS');
     }, () => showToast('Unable to get GPS location'));
 }
@@ -339,8 +371,10 @@ function submitReport() {
     document.getElementById('report-details').value = '';
 }
 
+// ========== HUB MAPS ==========
 function showHubMap(mode) {
-    document.getElementById('hub-map-container').style.display = 'block';
+    const container = document.getElementById('hub-map-container');
+    if (container) container.style.display = 'block';
 
     setTimeout(() => {
         if (!hubMap) {
@@ -350,18 +384,22 @@ function showHubMap(mode) {
             }).addTo(hubMap);
         } else {
             hubMap.invalidateSize();
-            hubMap.eachLayer(l => { if (l instanceof L.Marker || l instanceof L.CircleMarker) hubMap.removeLayer(l); });
+            hubMap.eachLayer(l => {
+                if (l instanceof L.Marker || l instanceof L.CircleMarker) hubMap.removeLayer(l);
+            });
         }
 
         const legend = document.getElementById('hub-legend');
 
         if (mode === 'active') {
-            legend.innerHTML = `
-                <strong style="color:var(--orange)">🔥 ACTIVE FIRES - ILOILO</strong><br>
-                <span style="font-size:11px;opacity:0.8">Showing fire locations only</span>
-            `;
+            if (legend) {
+                legend.innerHTML = `
+                    <strong style="color:var(--orange)">🔥 ACTIVE FIRES - ILOILO</strong><br>
+                    <span style="font-size:11px;opacity:0.8">Showing fire locations only</span>
+                `;
+            }
             const active = getActiveAlerts();
-            if (active.length === 0) {
+            if (active.length === 0 && legend) {
                 legend.innerHTML += '<br><span style="color:#22C55E">No active fires</span>';
             }
             active.forEach(a => {
@@ -382,10 +420,12 @@ function showHubMap(mode) {
                 `);
             });
         } else if (mode === 'hydrant') {
-            legend.innerHTML = `
-                <strong style="color:var(--orange)">🚒 FIRE HYDRANTS - ILOILO</strong><br>
-                <span style="font-size:11px;opacity:0.8">Blue markers = Hydrant locations</span>
-            `;
+            if (legend) {
+                legend.innerHTML = `
+                    <strong style="color:var(--orange)">🚒 FIRE HYDRANTS - ILOILO</strong><br>
+                    <span style="font-size:11px;opacity:0.8">Blue markers = Hydrant locations</span>
+                `;
+            }
             hydrants.forEach(h => {
                 const m = L.circleMarker([h.lat, h.lng], {
                     color: '#0284C7',
@@ -398,8 +438,7 @@ function showHubMap(mode) {
                     <div style="min-width:150px">
                         <strong style="color:#0EA5E9">🚒 Hydrant ${h.id}</strong><br>
                         Area: ${h.area || 'Iloilo'}<br>
-                        Status: Operational<br>
-                        <small>TXTFIRE-style locator</small>
+                        Status: Operational
                     </div>
                 `);
             });
@@ -407,21 +446,31 @@ function showHubMap(mode) {
     }, 150);
 }
 
+// ========== NAV ==========
 function switchTab(tab) {
     document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
 
     const mapSec = { home: 0, report: 1, hub: 2, settings: 3 };
-    document.getElementById(tab + '-section').classList.add('active');
-    document.querySelectorAll('.nav-item')[mapSec[tab]].classList.add('active');
+    const section = document.getElementById(tab + '-section');
+    if (section) section.classList.add('active');
+    const navItems = document.querySelectorAll('.nav-item');
+    if (navItems[mapSec[tab]]) navItems[mapSec[tab]].classList.add('active');
 
     if (tab === 'report') {
         setTimeout(initReportMap, 200);
     }
 }
 
-function showLogin() { document.getElementById('login-modal').classList.add('show'); }
-function hideLogin() { document.getElementById('login-modal').classList.remove('show'); }
+// ========== DISPATCHER ==========
+function showLogin() {
+    const modal = document.getElementById('login-modal');
+    if (modal) modal.classList.add('show');
+}
+function hideLogin() {
+    const modal = document.getElementById('login-modal');
+    if (modal) modal.classList.remove('show');
+}
 
 function attemptLogin() {
     const user = document.getElementById('username').value.trim();
@@ -469,8 +518,8 @@ function createNewAlert() {
         type, location, status, statusClass,
         time: new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' }),
         units: [],
-        lat: 10.7202 + (Math.random()-0.5)*0.05,
-        lng: 122.5621 + (Math.random()-0.5)*0.05,
+        lat: 10.7202 + (Math.random() - 0.5) * 0.05,
+        lng: 122.5621 + (Math.random() - 0.5) * 0.05,
         area: 'Iloilo'
     };
     alerts.push(newAlert);
@@ -484,40 +533,4 @@ function createNewAlert() {
 function assignUnit() {
     if (currentRole !== 'dispatcher') return;
     const active = getActiveAlerts();
-    if (!active.length) { showToast('No active alerts'); return; }
-    const unitName = prompt('Unit (Rescue 1-5):', 'Rescue 1');
-    const alertId = prompt('Alert ID:', active[active.length-1].id.toString());
-    const alert = alerts.find(a => a.id == alertId);
-    if (alert && unitName) {
-        if (!alert.units.includes(unitName)) {
-            alert.units.push(unitName);
-            const u = units.find(x => x.name === unitName);
-            if (u) { u.status = 'Dispatched'; u.lat = alert.lat; u.lng = alert.lng; }
-            renderAlerts();
-            pushToJsonBin();
-            showToast(unitName + ' assigned');
-        }
-    }
-}
-
-function markFireOut() {
-    if (currentRole !== 'dispatcher') return;
-    const active = getActiveAlerts();
-    if (!active.length) { showToast('No active fires'); return; }
-    const alertId = prompt('Alert ID to mark Fire Out:', active[active.length-1].id.toString());
-    const alert = alerts.find(a => a.id == alertId);
-    if (alert) {
-        alert.status = 'Fire Out';
-        alert.statusClass = 'fire-out';
-        alert.units.forEach(name => {
-            const u = units.find(x => x.name === name);
-            if (u) u.status = 'Available';
-        });
-        renderAlerts();
-        pushToJsonBin();
-        showToast('✅ Moved to HISTORY');
-        showLocalNotification('Fire Out', alert.location);
-    }
-}
-
-windo
+    if (!active.length) { showToast('No activ
